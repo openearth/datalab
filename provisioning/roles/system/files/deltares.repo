@@ -1,0 +1,6 @@
+[deltares]
+name=Deltares repo
+#baseurl=http://al-ng001.xtr.deltares.nl/yum/CentOS/6/x86_64/OpenEarthStack/
+mirrorlist=file:///etc/yum.repos.d/deltares_mirrors
+gpgcheck=0
+enabled=1

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load cms_tags %}
+{% block title %}helpdesk{{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        {% placeholder 'content' or %}
+        {% endplaceholder %}
+    </div>
+    <div class="col-md-2"></div>
+</div>
+{% endblock %}

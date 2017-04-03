@@ -1,0 +1,30 @@
+{% load i18n cms_tags menu_tags cms_extensions %}
+<nav class="navbar-default navbar-static-side" role="navigation">
+    <div class="sidebar-collapse">
+        <ul class="nav" id="side-menu">
+            <li>
+                <a href="{{ svn_url }}" target="_blank"><i class="fa fa-sitemap fa-fw"></i> SVN Repo</a>
+            </li>
+            <li>
+                <a href="/environments/"><i class="fa fa-briefcase fa-fw"></i> Environments</a>
+            </li>
+            <li>
+                <a href="/geoexplorer/composer/" target="_blank"><i class="fa fa-globe fa-fw"></i> GeoExplorer</a>
+            </li>
+            <li>
+                <a href="/thredds/catalog.html" target="_blank"><i class="fa fa-table fa-fw"></i> Thredds</a>
+            </li>
+             <li>
+                <a href="/documentation" target="_blank"><i class="fa fa-question fa-fw"></i>Documentation</a>
+            </li>
+            {% get_static_placeholder 'contact_link' %}
+            {% if contact_link %}
+            <li>
+                <a href="{{ contact_link }}"><i class="fa fa-envelope fa-fw"></i> Contact</a>
+            </li>
+            {% endif %}
+        </ul>
+        <!-- /#side-menu -->
+    </div>
+    <!-- /.sidebar-collapse -->
+</nav>

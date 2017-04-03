@@ -1,0 +1,32 @@
+---
+
+# Move /srv/openearth/smedia/ to /data/smedia/. Because we use filer which
+# copies the files instead of referencing them.
+#
+# ansible-playbook -i provisioning/inventory_otap provisioning/_playbooks/move_smedia_dir.yml --limit=vagrant* -vvvv -u vagrant --private-key=~/.vagrant.d/insecure_private_key
+
+- hosts: all
+  connection: ssh
+  vars:
+    src: /srv/openearth/smedia
+    dest: /data/smedia/
+
+  tasks:
+    - name: stat smedia dir
+      stat: path={{ src }}
+      register: is_dir
+
+    - name: echo
+      command: echo {{ is_dir }}
+
+    - name: is smedia a dir?
+      fail: msg="Cannot move smedia dir because {{ src }} is not a dir"
+      when: not is_dir.stat.isdir is defined or not is_dir.stat.isdir
+
+    - name: move smedia dir
+      sudo: yes
+      command: mv {{ src }} {{ dest }} creates={{ dest }}
+
+    - name: symlink to original place
+      sudo: yes
+      file: src={{ dest }} dest={{ src }} state=link

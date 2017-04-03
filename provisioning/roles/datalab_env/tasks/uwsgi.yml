@@ -1,0 +1,88 @@
+---
+
+#
+# install uwsgi to serve django
+#
+
+- name: check if uwsgi aready exists
+  sudo: yes
+  command: sudo initctl status uwsgi
+  register: uwsgi_status
+  ignore_errors: True
+
+- name: Create Group uwsgi
+  sudo: yes
+  group: name={{ uwsgi_user }} system=yes
+
+- name: Create User uwsgi
+  sudo: yes
+  user: name={{ uwsgi_user }} group={{ uwsgi_group }} system=yes createhome=yes
+
+- name: add app_user to libvirt
+  sudo: yes
+  user: name={{ app_user }} append=yes groups={{ uwsgi_group }}
+
+- name: Make uswgi dirs
+  sudo: yes
+  file: path={{ item }} state=directory group={{ uwsgi_group }} owner={{ uwsgi_user }}
+  with_items:
+    - /var/run/uwsgi/
+    - /var/log/uwsgi/
+    - /srv/uwsgi/
+
+- name: Make sure container data dir has correct permissions
+  sudo: yes
+  file: path={{ container_dir }} state=directory group={{ uwsgi_group }} owner={{ uwsgi_user }}
+
+- name: change log and media group
+  sudo: yes
+  file: path=/srv/{{ app_module }}/{{ item }} state=directory group={{ uwsgi_group }} owner={{ app_user }} mode=0775
+  with_items:
+    - log
+    - media
+
+- name: fix rights to log file
+  sudo: yes
+  file: path=/srv/{{ app_module }}/log/{{ app_module }}.log state=touch group={{ uwsgi_group }} owner={{ app_user }} mode=0664
+
+- name: yum packages for uwsgi requirements
+  sudo: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - python-devel
+    - pcre
+    - pcre-devel
+  when:
+    - uwsgi_status|failed
+
+- name: pip install uwsgi
+  sudo: yes
+  sudo_user: "{{ app_user }}"
+  pip: name=uwsgi extra_args='--no-use-wheel' virtualenv=/srv/{{ app_module }}/venv virtualenv_command=/opt/python2.7/bin/virtualenv
+  when:
+    - uwsgi_status|failed
+
+- name: Creating uwsgi ini-file
+  sudo: yes
+  template: src={{ item.src }}
+            dest=/srv/{{ item.dest }}
+            group={{ app_user }} owner={{ app_user }} mode=0755
+  with_items:
+    - {src: env.ini, dest: "{{ app_module }}/etc/env.ini"}
+    - {src: uwsgi.ini, dest: "uwsgi/{{ app_module }}.ini"}
+    - {src: uwsgi_websocket.ini, dest: "uwsgi/{{ app_module }}_websocket.ini"}
+  notify:
+    - kill celery
+
+- name: Creating uwsgi upstart conf
+  sudo: yes
+  template: src=uwsgi-upstart.conf
+            dest=/etc/init/uwsgi.conf
+            group=root owner=root mode=0644
+
+- name: "Restart uwsgi"
+  shell: /usr/bin/uptime
+  notify:
+    - stop uwsgi
+    - start uwsgi
+    - kill celery

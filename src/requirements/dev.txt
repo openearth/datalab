@@ -1,0 +1,5 @@
+# Install all of our dev dependencies only.
+-r common.txt
+-r linux.txt
+django-debug-toolbar==1.0.1
+factory-boy==2.3.1

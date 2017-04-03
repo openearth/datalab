@@ -1,0 +1,101 @@
+---
+
+- name: add yum nginx repo
+  sudo: yes
+  template: src=nginx.repo dest=/etc/yum.repos.d/nginx.repo
+
+- name: copy yum nginx repo key
+  sudo: yes
+  copy: src=nginx_signing.key dest=/root/nginx_signing.key
+  register: nginx_repo_key
+
+- name: import nginx repo key
+  sudo: yes
+  command: /bin/rpm --import /root/nginx_signing.key
+  when: nginx_repo_key['changed']
+
+- name: install nginx
+  sudo: yes
+  yum: name=nginx state=present
+
+- name: configure nginx proxies
+  sudo: yes
+  template: src='{{ item.src }}' dest='/etc/nginx/conf.d/{{ item.dest }}'
+  notify: restart nginx
+  with_items:
+    - {src: 'app.conf', dest: '{{ app|replace("-", "_") }}.conf'}
+    - {src: 'no_ssl.conf', dest: 'no_ssl.conf'}
+    - {src: 'nginx_proxies.conf', dest: 'nginx_proxies.conf'}
+  tags:
+    - multisite
+
+- name: configure nginx auth subrequest
+  sudo: yes
+  template: src={{ item }} dest=/etc/nginx/{{ item }}
+  notify: restart nginx
+  with_items:
+    - auth_request.conf
+  tags:
+    - multisite
+
+- name: remove nginx default conf and old config
+  sudo: yes
+  file: path=/etc/nginx/conf.d/{{ item }} state=absent
+  notify: restart nginx
+  with_items:
+    - default.conf
+  tags:
+    - multisite
+
+- name: copy certificates
+  sudo: yes
+  copy: dest=/etc/nginx/{{ ansible_fqdn }}.{{ item }} mode=0600 owner=root group=root
+  with_first_found:
+    - files/certificates/{{ ansible_fqdn }}.{{ item }} 
+  ignore_errors: yes
+  # TODO: put {{ ansible_fqdn }} over here: files/certificates/{{ ansible_fqdn }}.{{ item }}
+  with_items:
+    - nginx.pem
+    - nginx.key
+  notify: restart nginx
+
+- name: generate ssl certificates
+  sudo: yes
+  command: openssl req -new -nodes -x509 -subj "/C=NL/ST=Zuid-Holland/L=Delft/O=IT/CN={{ ansible_fqdn }}" -days 3560 -keyout /etc/nginx/{{ ansible_fqdn }}.nginx.key -out /etc/nginx/{{ ansible_fqdn }}.nginx.pem -extensions v3_ca creates=/etc/nginx/{{ ansible_fqdn }}.nginx.pem
+  notify: restart nginx
+
+# Configure nginx client_temp dir. Else huge uploads (for svn) eat diskspace
+# from root disk.
+- name: create nginx data dir
+  sudo: yes
+  file: state=directory mode=0755 owner=root group=root path=/data/nginx/
+
+- name: create nginx cache dir
+  sudo: yes
+  file: state=directory mode=0755 owner=root group=root path=/data/nginx/cache/client_temp
+
+- name: remove original client_temp dir
+  sudo: yes
+  file: state=absent path=/var/cache/nginx/client_temp
+
+- name: Give nginx permissions to store store files temporarily
+  sudo: yes
+  command: chown -R nginx:root /data/nginx/cache
+
+- name: create symlink to client temp in data dir
+  sudo: yes
+  file: state=link src=/data/nginx/cache/client_temp dest=/var/cache/nginx/client_temp
+
+- name: copy index.html
+  sudo: yes
+  copy: src={{ item }} dest=/usr/share/nginx/html/{{ item }} mode=0644 owner=root group=root
+  with_items:
+    - bootstrap.css
+    - index.html
+    - jumbotron-narrow.css
+  notify: restart nginx
+
+- name: add nginx to init
+  sudo: yes
+  command: /sbin/chkconfig --add nginx
+  notify: restart nginx

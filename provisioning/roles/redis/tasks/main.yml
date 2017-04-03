@@ -1,0 +1,81 @@
+---
+
+- name: check if redis aready exists
+  sudo: yes
+  service: name=redis-server state=started enabled=yes
+  register: redis_status
+  ignore_errors: True
+
+- name: Download Redis    
+  get_url: url={{ item }}
+           dest=/tmp/redis-{{ redis_version }}.tar.gz           
+  with_items:
+    - http://download.redis.io/releases/redis-{{ redis_version }}.tar.gz
+  when:
+    - redis_status|failed
+
+- name: Untar Redis  
+  sudo: yes
+  command: creates=/tmp/redis-{{ redis_version }} chdir=/tmp/ tar zxvf /tmp/redis-{{ redis_version }}.tar.gz
+  when:
+    - redis_status|failed
+
+- name: Create Group redis
+  sudo: yes
+  group: name={{ redis_user }} system=yes
+  when:
+    - redis_status|failed
+  
+- name: Create User redis
+  sudo: yes
+  user: name={{redis_user}} group={{redis_user}} system=yes createhome=no
+  when:
+    - redis_status|failed
+
+- name: Add {{ app_user }} to redis group
+  sudo: yes
+  user: state=present name={{ app_user }} append=yes groups={{ redis_user }}
+  when:
+    - redis_status|failed
+  
+- name: Make Redis dirs
+  sudo: yes  
+  file: path={{ item }} state=directory group={{ redis_user }} owner={{ redis_user }}
+  with_items:
+    - /var/run/redis/
+    - /var/lib/redis-server/
+    - /etc/redis-server/
+    - /var/log/redis/
+  when:
+    - redis_status|failed
+  
+- name: Install Redis
+  sudo: yes  
+  command: creates=/usr/local/bin/redis-server chdir=/tmp/redis-{{ redis_version }} make install
+  when:
+    - redis_status|failed
+
+- name: Redis configfile
+  sudo: yes
+  sudo_user: "{{ redis_user }}"
+  template: src=redis.conf.tpl
+            dest=/etc/redis-server/redis.conf
+
+- name: Redis-server init script
+  sudo: yes    
+  template: src=redis-server.tpl
+            dest=/etc/init.d/redis-server 
+            group=root owner=root mode=0755
+  when:
+    - redis_status|failed
+
+- name: chkconfig redis
+  sudo: yes
+  command: chkconfig {{ item }}
+  with_items:
+    - --add redis-server  
+    - --level 345 redis-server on  
+  notify: restart redis
+  
+  
+  

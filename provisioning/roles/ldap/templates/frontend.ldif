@@ -1,0 +1,20 @@
+dn: dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: top
+objectClass: dcObject
+objectclass: organization
+o: {{ldap_dc_first}} {{ldap_dc_second}}
+dc: {{ldap_dc_first}}
+
+dn: cn=admin,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: admin
+userPassword: {{ldap_admin_passwd}}
+
+dn: ou=people,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: organizationalUnit
+ou: groups

@@ -1,0 +1,25 @@
+# file: geonetwork3/defaults/main.yml
+
+tomcat_management_user: tomcat
+tomcat_management_group: tomcat
+tomcat_version: tomcat6
+tomcat_base: "/var/lib/{{ tomcat_version }}"
+tomcat_conf: "{{ tomcat_base }}/conf"
+tomcat_conf_file: "/usr/share/{{ tomcat_version }}/conf/{{ tomcat_version }}.conf"
+tomcat_webapps: "{{ tomcat_base }}/webapps"
+download_geonetwork: false
+
+default_geonetwork_dir: "{{tomcat_webapps}}/{{geonetwork_name}}"
+default_geonetwork_data_dir: "{{default_geonetwork_dir}}/WEB_INF/data/"
+
+geonetwork_version: "3.0.0"
+geonetwork_name: geonetwork
+geonetwork_dir: "{{ default_geonetwork_dir }}"
+geonetwork_data_dir: "{{ default_geonetwork_data_dir }}"
+geonetwork_db_user: geodb
+geonetwork_db_pass: geodb
+geonetwork_db_name: geodb
+geonetwork_db_host: 127.0.0.1
+geonetwork_db_port: 5432
+geonetwork_download_url: "http://downloads.sourceforge.net/project/geonetwork/GeoNetwork_opensource/v{{geonetwork_version}}/geonetwork.war"
+

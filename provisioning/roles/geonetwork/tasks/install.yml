@@ -1,0 +1,29 @@
+# file: geonetwork/tasks/install.yml
+
+- name: check if war exists
+  stat: path={{ tomcat_webapps }}/{{ geonetwork_name }}.war
+  register: geonetwork_war
+
+- name: download geonetwork
+  get_url: dest=/tmp/geonetwork_{{ geonetwork_version }}.war url={{ geonetwork_download_url }}
+  sudo: no
+  when: not geonetwork_war.stat.exists and download_geonetwork
+
+- name: install from files
+  copy: src=geonetwork.war dest=/tmp/geonetwork_{{ geonetwork_version }}.war
+  when: not geonetwork_war.stat.exists and not download_geonetwork
+
+- name: move .war to tomcat webapps
+  command: mv /tmp/geonetwork_{{ geonetwork_version }}.war {{ tomcat_webapps }}/{{ geonetwork_name }}.war
+  sudo: yes
+  when: not geonetwork_war.stat.exists
+
+- name: set rights of .war
+  file: path={{tomcat_webapps}}/{{ geonetwork_name }}.war owner=root group={{ tomcat_management_user }} mode=0644
+  sudo: yes
+  notify:
+    - restart tomcat
+
+- name: restart tomcat for sure
+  sudo: yes
+  command: /etc/init.d/tomcat6 restart 

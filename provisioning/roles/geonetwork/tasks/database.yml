@@ -1,0 +1,45 @@
+- name: check for a postgres installation
+  command: psql --version
+  register: command_result
+  failed_when: "'FAILED' in command_result.stderr"
+
+- name: create geonetwork database role without CREATEDB
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user: name={{ geonetwork_db_user }} password={{ geonetwork_db_pass }} role_attr_flags=NOCREATEDB
+  when: ansible_virtualization_type != "virtualbox"
+  notify:
+    - restart postgresql
+
+- name: create geonetwork database role with CREATEDB, SUPERUSER
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user: name={{ geonetwork_db_user }} password={{ geonetwork_db_pass }} role_attr_flags=CREATEDB,SUPERUSER
+  when: ansible_virtualization_type == "virtualbox"
+  notify:
+    - restart postgresql
+
+- name: create geonetwork database
+  sudo: yes
+  sudo_user: postgres
+  postgresql_db: name={{ geonetwork_db_name }} encoding=UTF-8 lc_collate=en_US.UTF-8 lc_ctype=en_US.UTF-8 owner={{ geonetwork_db_user }}
+  notify:
+    - restart postgresql
+
+- name: Check if postgis extensions are installed
+  sudo: yes
+  sudo_user: postgres
+  command: psql -c "SELECT PostGIS_full_version();" --dbname={{ geonetwork_db_name }}
+  register: psql_gis
+  ignore_errors: True
+
+- name: Add postgis extensions
+  sudo: yes
+  sudo_user: postgres
+  command: psql --dbname={{ geonetwork_db_name }} -c "CREATE EXTENSION  {{ item }}";
+  with_items:
+    - postgis
+    - postgis_topology
+  when: psql_gis|failed
+  notify:
+    - restart postgresql

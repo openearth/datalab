@@ -1,0 +1,28 @@
+---
+
+#
+# Move subversion dir from /data/svn to /data/svn/repos
+#
+
+- hosts: all
+  connection: ssh
+  vars:
+    svn_parent_path: /data/svn/repos
+
+  tasks:
+    - name: create openearth svn dir
+      sudo: yes
+      file: path={{svn_parent_path}} state=directory
+
+    - name: create openearth repo
+      sudo: yes
+      command: /usr/bin/svnadmin create {{svn_parent_path}}/openearth chdir={{svn_parent_path}} creates={{svn_parent_path}}/openearth/README.txt
+      #notify: restart httpd
+
+    - name: set openearth svn permissions
+      sudo: yes
+      file: path={{svn_parent_path}}/openearth owner=apache group=apache recurse=yes state=directory setype=httpd_sys_content_t
+
+    - name: dump old and load new openearth repo
+      sudo: yes
+      command: svnadmin dump /data/svn/openearth/ | svnadmin load {{svn_parent_path}}/openearth

@@ -1,0 +1,4 @@
+dn: cn=admin,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+changetype: modify
+replace: userPassword
+userPassword: {{ldap_admin_passwd}}

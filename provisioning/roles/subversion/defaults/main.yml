@@ -1,0 +1,5 @@
+---
+
+svn_parent_path: /var/www/svn
+svn_http_path: /repos
+svn_passwd_file: /etc/subversion/svn-auth.passwd

@@ -1,0 +1,16 @@
+---
+
+# Remove pgstudio from openearth* servers
+# ansible-playbook -i provisioning/hosts.cfg provisioning/remove_old_pgstudio.yml --limit=openearth*
+
+- hosts: all
+  connection: ssh
+
+  tasks:
+    - name: remove old pgstudio
+      sudo: yes
+      yum: name=postgresqlstudio state=absent
+
+    - name: restart tomcat6
+      sudo: yes
+      service: name=tomcat6 state=restarted

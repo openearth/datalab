@@ -1,0 +1,5 @@
+---
+- include: datalab_components.yml tags=components
+- include: datalab_src.yml tags=src
+- include: datalab_python_container.yml tags=python_container
+- include: datalab_matlab_container.yml tags=matlab_container

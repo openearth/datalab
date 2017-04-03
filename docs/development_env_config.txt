@@ -1,0 +1,56 @@
+Development Environment
+=======================
+
+Het project draait standaard in vagrant. Zie "getting_started.txt" voor
+informatie om het project te draaien. Doe dit eerst.
+
+
+PyCharm (of IDEA + pycharm plugin)
+----------------------------------
+PyCharm heeft een aatnal stappen nodig om te configureren:
+
+Remote Interpreter
+******************
+
+Wanneer het project draait, kan de PyCharm IDE geconfigureerd worden. Ga naar
+"preferences". (Op mac: CMD + ,).
+
+Project Interpreter ->
+Project Interpreters
+
+Voeg een interpretter to (+ icoon) en selecteer "remote...".
+
+Er verschijnt een pop-up. Klik op "Fill from vagrant config" en vervolgens op
+"Test connection..." om te testen of alles werkt.
+
+Bij python interpreter path druk op browse ("…"). Selecteer /srv/openearth/venv/bin/python2.7.
+
+Druk op OK. Nu gaat de interpretter indexeren.
+
+
+Django Support
+**************
+
+Open preferences (CMD+,). Ga naar Django Support. Enable django support
+aanvinken. Zet de project root op "~/PycharmProjects/openearth/src/". Settings
+moet op "openearth/settings/dev.py" staan. Het manage script is "manage.py"
+
+Runserver
+*********
+
+In de "Run/Debug Configurations"-dialog, zet Host op 0.0.0.0.
+
+Wanneer runserver nu gedraaid wordt uit de IDE, is de site te bereiken op:
+`http://localhost:8000`.
+
+That's it!
+
+
+Sublime
+-------
+
+Emacs
+-----
+
+Vim
+---

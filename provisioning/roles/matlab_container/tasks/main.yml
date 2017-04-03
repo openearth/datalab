@@ -1,0 +1,325 @@
+#
+# R E A D M E !   R E A D M E !   R E A D M E !   R E A D M E !   R E A D M E !
+#
+# This playbook creates a container image, with matlab 2013 support.
+# Add user: worker, copies the host ssh key to it.
+# Also sets a password for the root user. Useful for debugging instances.
+#
+# Installation of matlab license is quite difficult.
+#
+# To download matlab you need a mathworks account. See info at:
+# https://blackboard.tudelft.nl/bbcswebdav/institution/TDS/software/Matlab%20Staff/info.html
+# Click on the "Installation" tab or follow this step-by-step document:
+# https://blackboard.tudelft.nl/bbcswebdav/institution/TDS/software/Matlab%20Staff/Doc/MatLabStaffAccountInstructions.doc
+#
+# You need a license key (license.lic) and a file installation key (FIK).
+# Download the network license here and save it as license.lic
+# https://blackboard.tudelft.nl/bbcswebdav/institution/TDS/software/Matlab%20Staff/Licentie/license.dat
+#
+# 03480-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
+# You can obtain the FIK at: https://www.mathworks.com/licensecenter/
+# (click on the item in the table), click "activation and installation" tab and
+# then "Add a license". For this you need a mac address and an activation key.
+# Download the required files for matlab at:
+# http://www.mathworks.nl/downloads/web_downloads/
+# This needs registration. Use your delft email or it will not work.
+#
+# Summary of keys and where to put them.
+#
+# license key (license.lic) (mathworks.com)
+#  - store file in files/licenses/license.lic
+# file installation key (mathworks.com)
+#  - store in vars: hostname.tudelft.nl, matlab_file_installation_key
+#
+# Summary of files and where to put them.
+# - provisioning/files/matlab/MATLAB82_common.zip
+# - provisioning/files/matlab/MATLAB82_glnxa64.zip
+# - provisioning/files/matlab/MATLAB82_common.zip
+#
+---
+- name: remove old matlab container
+  sudo: yes
+  file: path={{container_dir}}/{{matlab_container_name}} state=absent
+  ignore_errors: yes
+  when: remove_matlab_container == 'Y' or remove_matlab_container == 'y'
+
+- name: create container directories
+  sudo: yes
+  file: path={{container_dir}} owner={{app_user}} mode=0775 state=directory
+
+- name: symlink container dir to app dir
+  sudo: yes
+  file: dest=/srv/{{app_user}}/containers src={{container_dir}} owner={{app_user}} state=link
+
+# We have to create an image file. This is because the image is copied as a
+# non-root user by the processing task. Copying a directory with a minimal
+# centos install as a normal user is not possible; everything is installed
+# as root. If a inimal install is not created as root, ownership on all files
+# will end up as non-root. Which is not a good idea (/etc/passwd for example).
+- name: create image
+  sudo: yes
+  command: dd if=/dev/zero of={{container_dir}}/{{matlab_container_name}} bs=1 count=0 seek={{container_size}}
+      creates={{container_dir}}/{{matlab_container_name}}
+  register: image
+
+- name: add filesystem to image
+  sudo: yes
+  shell: yes | /sbin/mkfs -t ext3 -q {{container_dir}}/{{matlab_container_name}}
+  when: image.changed
+
+- name: find unused loop device
+  sudo: yes
+  command: losetup -f
+  register: loopdev
+
+- name: make sure /mnt is not mounted by something else
+  sudo: yes
+  command: umount /mnt
+  ignore_errors: yes
+
+- name: mount image in /mnt
+  sudo: yes
+  command: mount -o loop={{loopdev.stdout}} {{container_dir}}/{{matlab_container_name}} /mnt
+
+- name: create container base directories
+  sudo: yes
+  command: mkdir /mnt/{{item}} -p
+  with_items:
+    - "/etc/yum.repos.d/"
+
+- name: copy yum repo files from host to base container
+  sudo: yes
+  shell: /bin/cat /etc/yum.repos.d/{{item}} | /bin/sed s/'$releasever'/6/g > /mnt/etc/yum.repos.d/{{item}}
+  with_items:
+    - deltares.repo
+    - CentOS-Base.repo
+
+# Install centos core into the image.
+- name: install minimal centos core
+  sudo: yes
+  command: yum groupinstall {{item}} -y --installroot=/mnt --nogpgcheck
+  with_items:
+    - core
+    - plymouth
+    - libselinux-python
+
+#
+# System config, packages, users and device files
+#
+- name: create random and urandom to make encryption work
+  sudo: yes
+  command: mknod -m {{item.mode}} /mnt/dev/{{item.device}} c {{item.name}} {{item.type}} creates=/mnt/dev/{{item.device}}
+  with_items:
+    - {device: "urandom", name: "1", type: "9", mode: "0444"}
+    - {device: "random", name: "1", type: "8", mode: "0666"}
+
+- name: set root password in container
+  sudo: yes
+  command: chroot /mnt sh -c "echo 'root:{{container_root_pass}}' | chpasswd"
+
+- name: create worker user in container
+  sudo: yes
+  command: chroot /mnt adduser worker creates=/mnt/home/worker
+
+- name: fix base container tty
+  sudo: yes
+  copy: src=container/securetty dest=/mnt/etc/ mode=655 owner=root group=root
+
+- name: fix login pam rules in container
+  sudo: yes
+  copy: src=container/{{item.local}} dest=/mnt/etc/pam.d/{{item.remote}} mode=600 owner=root group=root
+  with_items:
+    - {local: pam_sshd, remote: sshd}
+    - {local: pam_login, remote: login}
+
+- name: add networking support to container
+  sudo: yes
+  template: src=container/network  dest=/mnt/etc/sysconfig/network mode=644 owner=root group=root
+
+- name: configure network devices in container
+  sudo: yes
+  copy: src=container/{{ item }} dest=/mnt/etc/sysconfig/network-scripts/{{ item }} mode=644 owner=root group=root
+  with_items:
+    - "ifcfg-eth0"
+#
+#- name: copy alternative init.d network script.
+#  sudo: yes
+#  copy: src=container/network dest=/mnt/etc/init.d/network
+
+- name: configure fstab in container
+  sudo: yes
+  copy: src=container/fstab dest=/mnt/etc/fstab mode=644 owner=root group=root
+
+- name: configure mtab in container
+  sudo: yes
+  file: dest=/mnt/etc/mtab mode=644 owner=root group=root state=touch
+
+- name: create worker user .ssh dir in container
+  sudo: yes
+  file: path=/mnt/home/worker/.ssh mode=0700 state=directory
+
+- name: add ssh key to authorized_keys for "worker" in container
+  sudo: yes
+  command: "cp /home/{{uwsgi_user}}/.ssh/{{worker_ssh_key_name}}.pub /mnt/home/worker/.ssh/authorized_keys"
+
+- name: chown .ssh dir to worker:worker in container
+  sudo: yes
+#  file: path=/mnt/home/worker/.ssh mode=0700 state=directory
+  command: chroot /mnt sh -c "chown -R worker:worker /home/worker/.ssh"
+
+- name: set file permissions for .ssh and files in worker
+  sudo: yes
+  file: path=/mnt/home/worker/.ssh mode=0700 state=directory
+
+- name: set file permissions for .ssh and files in worker
+  sudo: yes
+  file: path=/mnt/home/worker/.ssh/authorized_keys mode=0600 state=file
+
+- name: copy host resolv.conf to container
+  sudo: yes
+  command: cp /etc/resolv.conf /mnt/etc/resolv.conf
+
+- name: create cgroup directory for container
+  sudo: yes
+  file: path=/mnt/cgroup owner=root group=root mode=0755 state=directory
+
+- name: yum add epel repo into container
+  sudo: yes
+  command: yum install http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm -y --installroot=/mnt/ --nogpgcheck
+           creates=/mnt/etc/yum.repos.d/epel.repo
+
+- name: install system requirements into base container
+  sudo: yes
+  command: yum install {{item}} -y --installroot=/mnt/ --nogpgcheck
+  with_items:
+    - libXtst
+    - libXt
+    - libXmu
+    - java-1.7.0-openjdk
+    - subversion
+
+- name: copy java library config
+  sudo: yes
+  copy: src=java.conf dest=/etc/ld.so.conf.d/java.conf
+
+- name: run ld config
+  sudo: yes
+  command: /sbin/ldconfig
+
+- name: install requirements for python scripts into container
+  sudo: yes
+  command: yum install {{item}} -y --installroot=/mnt/ --nogpgcheck
+  with_items:
+    - python27
+    - python27-setuptools
+
+- name: install pip in container
+  sudo: yes
+  command: /usr/sbin/chroot /mnt sh -c "/opt/python2.7/bin/easy_install pip"
+
+#- name: force svn to accept server cert for {{app_username}}
+#  sudo_user: "{{ app_user }}"
+#  shell: chroot printf "p\nyes\n" "p" |svn list {{environment_svn_url}}
+#    --username={{environment_svn_username}} --password={{environment_svn_password}}
+
+#
+# Install Matlab
+#
+- name: create matlab installer dir
+  sudo: yes
+  file: path=/root/matlab state=directory
+
+- name: copy required matlab installer
+  sudo: yes
+  unarchive: src=files/matlab/MATLAB82_common.zip dest=/root/matlab creates=/root/matlab/install
+
+#- name: unzip matlab installer
+#  sudo: yes
+#  unarchive: src=/root/MATLAB82_common.zip dest=/root/matlab
+
+- name: copy required matlab components
+  sudo: yes
+  copy: src=files/matlab/{{item}} dest=/root/matlab/archives/{{item}}
+  with_items:
+    - MATLAB82_common.zip
+    - MATLAB82_glnxa64.zip
+
+# copy template
+- name: copy keys for matlab files
+  sudo: yes
+  template: src={{item}} dest=/root/matlab/{{item}}
+  with_items:
+    #- activate.ini # obsolkete
+    - installer_input.txt
+
+- name: create matlab licenses dir
+  sudo: yes
+  file: path=/mnt/opt/matlab/licenses/ state=directory
+
+- name: copy license.lic
+  sudo: yes
+  copy: src=files/licenses/matlab_license.lic dest=/mnt/opt/matlab/licenses/license.lic
+
+#
+# VIA SSH? Of de boel lokaal oplichten
+# lokaal:
+# - add alias voor eth0 met mac addres.
+#- name: add alias voor eth0 met mac addres.
+#  sudo: yes
+#  command: ip link add link eth0 mac0 type macvlan
+#
+#- name: configure mac address
+#  sudo: yes
+#  command: ifconfig mac0 hw ether {{matlab_container_mac_address}}
+#
+#- name: bring up alias
+#  sudo: yes
+#  command: ifconfig mac0 up
+
+# TODO: via ssh. install matlab?
+- name: install matlab
+  sudo: yes
+  command: /root/matlab/install -inputFile /root/matlab/installer_input.txt creates=/mnt/opt/matlab/bin/matlab
+
+# Not required for network install?
+#- name: activate matlab
+#  sudo: yes
+#  command: /mnt/opt/matlab/bin/activate_matlab.sh -propertiesFile /root/matlab/activate.ini # creates=/mnt/root/?
+
+# Add oetools to container
+- name: checkout open earth tools for matlab
+  sudo: yes
+  command: /usr/sbin/chroot /mnt sh -c "svn co
+    https://svn.oss.deltares.nl/repos/openearthtools/trunk/{{ item }}/ /home/worker/oetools/{{ item }}/
+    --non-interactive --trust-server-cert --username={{deltares_svn_user}}
+    --password={{deltares_svn_pass}}"
+  with_items:
+    - matlab
+    - python
+
+- name: fix ownership for matlab tools
+  sudo: yes
+  command: /usr/sbin/chroot /mnt sh -c "chown -R worker:worker /home/worker/oetools/"
+
+- name: remove random and urandom
+  sudo: yes
+  file: path=/mnt/dev/{{item}} state=absent
+  with_items:
+    - urandom
+    - random
+
+- name: umount image at /mnt
+  sudo: yes
+  mount: name=/mnt src={{container_dir}}/{{matlab_container_name}} fstype=ext3 state=unmounted
+
+- name: set app user permission on container
+  sudo: yes
+  file: path={{container_dir}}/{{matlab_container_name}} group={{app_user}} owner={{app_user}} state=file
+#
+#- name: bring down mac0
+#  sudo: yes
+#  command: ifconfig mac0 down
+#
+#- name: remove mac0
+#  sudo: yes
+#  command: ip link  del mac0

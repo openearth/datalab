@@ -1,0 +1,17 @@
+---
+
+
+- hosts: vagrant
+  connection: ssh
+  tasks:
+    - name: set permissions recusively to {{app_user}} {{app_group}}
+      sudo: yes
+      file: path={{item}} state=directory recurse=yes owner={{app_user}} group={{app_group}}
+      with_items:
+        - /srv/openearth/static
+        - /srv/openearth/venv
+
+
+  vars_files:
+    - "vars/{{ ansible_fqdn }}.yml"
+    - "vars/shared.yml"

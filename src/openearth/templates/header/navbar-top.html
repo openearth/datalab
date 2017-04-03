@@ -1,0 +1,64 @@
+{% load i18n cms_tags menu_tags cms_extensions %}
+{% get_static_placeholder 'header_photo_url' %}
+<div
+        class="photoheader {% if user.is_authenticated %}photoheader-small{% endif %}"
+        style="{% if header_photo_url %}background:url({{ header_photo_url }}) no-repeat bottom center fixed;{% endif %}"
+    >
+    <a href="/"><div class="title">{{ site.name }}</div></a>
+
+    {% get_static_placeholder 'header_photo_ref' %}
+    {% if header_photo_ref %}
+    <div class="header_photo_ref"><small>{{ header_photo_ref|safe }}</small></div>
+    {% endif %}
+
+    {% get_static_placeholder 'header_description' %}
+    {% if header_description %}
+    <div class="header_description">{{ header_description|safe }}</div>
+    {% endif %}
+</div>
+
+<nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
+    {% if user.is_authenticated %}
+    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-collapse">
+        <span class="sr-only">{% trans 'Toggle navigation' %}</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+    </button>
+    {% endif %}
+
+    <ul class="nav navbar-nav navbar-top-links navbar-left navbar-alwaysleft">
+        {% if user.is_authenticated %}
+        <li><a href="/"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a></li>
+        {% show_menu 0 100 100 100 "header/navbar-top-menu.html" %}
+
+        {% else %}
+        <li><a href="/">Home</a></li>
+        <li><a href="/about/">About</a></li>
+        <li><a href="/helpdesk/">Helpdesk</a></li>
+        {% endif %}
+
+        <li class="dropdown">
+            {% if user.is_authenticated %}
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#"><i class="fa fa-user fa-fw"></i>{{ user }} <i class="fa fa-caret-down"></i></a>
+            {% else %}
+            <a href="/login/"><i class="fa fa-sign-in fa-fw"></i> {% trans 'Login' %}</a>
+            {% endif %}
+            <ul class="dropdown-menu dropdown-user">
+                {% if user.is_authenticated %}
+                    <li><a href="{% url 'password_change' %}"><i class="fa fa-user fa-fw"></i> {% trans 'Change password' %}</a>
+                    </li>
+                    {% if user.is_staff %}
+                    <li><a href="{% url 'admin:index' %}"><i class="fa fa-gear fa-fw"></i> {% trans 'Admin' %}</a>
+                    </li>
+                    {% endif %}
+                    <li class="divider"></li>
+                    <li><a href="/logout/"><i class="fa fa-sign-out fa-fw"></i> {% trans 'Logout' %}</a>
+                    </li>
+                {% else %}
+                    <li><a href="/login/"><i class="fa fa-sign-in fa-fw"></i> {% trans 'Login' %}</a></li>
+                {% endif %}
+            </ul>
+        </li>
+    </ul>
+</nav>

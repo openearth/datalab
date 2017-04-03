@@ -1,0 +1,5 @@
+# oe_admin, people, tudelft.nl
+dn: cn=oe_admin,ou=people,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+changetype: modify
+replace: userPassword
+userPassword: {{oe_admin_pass}}

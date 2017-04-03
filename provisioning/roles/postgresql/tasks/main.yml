@@ -1,0 +1,83 @@
+---
+
+# http://wiki.postgresql.org/wiki/YUM_Installation#Configure_your_YUM_repository
+- name: exclude postgres from CentOS repo
+  sudo: yes
+  ini_file: dest=/etc/yum.repos.d/CentOS-Base.repo section={{item}} option=exclude
+            value=postgresql* backup=yes
+  with_items:
+      - updates
+      - base
+  when: ansible_distribution == "CentOS"
+
+- name: exclude postgres from RedHat repo
+  sudo: yes
+  ini_file: dest=/etc/yum/pluginconf.d/rhnplugin.conf section=main option=exclude
+            value=postgresql* backup=yes
+  when: ansible_distribution == "RedHat"
+
+- name: add yum pg repo
+  sudo: yes
+  yum: name=http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-{{ansible_distribution|lower}}93-9.3-1.noarch.rpm state=present
+
+- name: install postgresql
+  sudo: yes
+  yum: name={{item}} state=present
+  with_items:
+    - postgresql93-server
+    - postgresql93-devel
+
+- name: symlink pg_config to /usr/local/bin
+  sudo: yes
+  file: src=/usr/pgsql-9.3/bin/pg_config dest=/usr/local/bin/pg_config state=link
+
+# Move postgresql dir
+- name: make sure /data is there
+  sudo: yes
+  file: path=/data state=directory mode=0755
+
+- name: stat postgresql datadir
+  stat: path=/var/lib/pgsql
+  register: st_pgsql
+
+- name: make sure postgresql is stopped if move is required
+  sudo: yes
+  service: name=postgresql-9.3 state=stopped
+  when: st_pgsql.stat.exists and st_pgsql.stat.isdir
+
+- name: move postgresql datadir
+  sudo: yes
+  command: mv /var/lib/pgsql/ {{postgresql_data_dir}}
+  when: st_pgsql.stat.exists and st_pgsql.stat.isdir
+
+- name: symlink postgresql datadir
+  sudo: yes
+  file: src={{postgresql_data_dir}} dest=/var/lib/pgsql  state=link
+
+- name: initialize db
+  sudo: yes
+  command: /sbin/service postgresql-9.3 initdb creates=/data/postgresql/9.3/data/pg_hba.conf
+  notify: restart postgresql
+
+# Finally initialize db and add to runlevel with chkconfig1
+
+- name: install sane pg_hba.conf
+  sudo: yes
+  copy: src=pg_hba.conf dest={{postgresql_data_dir}}/9.3/data/pg_hba.conf
+  notify: restart postgresql
+
+- name: wait for postgresql restart
+  command: sleep 10
+  tags: postgresql
+
+- name: set pg_hba file permissions
+  sudo: yes
+  file: path={{postgresql_data_dir}}/9.3/data/pg_hba.conf owner=postgres group=postgres
+
+- name: postgres boots automatically
+  sudo: yes
+  command: chkconfig postgresql-9.3 on
+
+- name: make sure postgres is started
+  sudo: yes
+  service: name=postgresql-9.3 state=started

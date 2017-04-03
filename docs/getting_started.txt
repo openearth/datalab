@@ -1,0 +1,8 @@
+Getting Started
+===============
+
+Development environment
+-----------------------
+Er wordt gewerkt met vagrant. Cd naar de map van de "Vagrantfile". Wanneer je
+`vagrant up default` draait, wordt een hele development virtual machine
+geinstalleerd en ge provisioned.

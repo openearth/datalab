@@ -1,0 +1,53 @@
+# file: geonetwork/tasks/configure.yml
+- name: create data dir
+  sudo: yes
+  file: path={{ geonetwork_data_dir }} state=directory mode=0775
+    owner={{ tomcat_management_user }}
+    group={{ tomcat_management_group }}
+
+- name: create tomcat conf dir if missing
+  sudo: yes
+  file: path={{ tomcat_conf }} state=directory mode=0775 owner=root
+    group={{ tomcat_management_group }}
+
+- name: update tomcat.conf
+  sudo: yes
+  template: src=tomcat6.conf.j2
+    dest={{ tomcat_conf_file }}
+    group=root owner=root mode=0664
+  notify:
+    - restart tomcat
+- name: restart tomcat for sure
+  sudo: yes
+  service: name=tomcat6 state=restarted
+
+- name: configure jdbc.properties
+  sudo: yes
+  template: src=jdbc.properties.j2
+    dest={{ geonetwork_dir }}/WEB-INF/config-db/jdbc.properties
+    group={{ tomcat_management_group }} owner={{ tomcat_management_user }} mode=0664
+  notify:
+    - restart tomcat
+
+- name: link jdbc.properties
+  sudo : yes
+  file: src={{ geonetwork_dir }}/WEB-INF/config-db/jdbc.properties
+    path={{ tomcat_conf }}/jdbc.properties state=link
+  notify:
+    - restart tomcat
+
+- name: configure postgres-postgis.xml
+  sudo: yes
+  template: src=postgres-postgis.xml.j2
+    dest={{ geonetwork_dir }}/WEB-INF/config-db/postgres-postgis.xml
+    group={{ tomcat_management_group }} owner={{ tomcat_management_user }} mode=0664
+  notify:
+    - restart tomcat
+
+- name: configure srv.xml
+  sudo: yes
+  template: src=srv.xml.j2
+    dest={{ geonetwork_dir }}/WEB-INF/config-node/srv.xml
+    group={{ tomcat_management_group }} owner={{ tomcat_management_user }} mode=0664
+  notify:
+    - restart tomcat

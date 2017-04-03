@@ -1,0 +1,13 @@
+---
+
+# Somehow the service module fails on this one wit a JSON Decode error
+- name: restart slapd
+  sudo: yes
+#  service: name=slapd state=restarted
+  command: /etc/init.d/slapd restart
+
+
+- name: restart httpd
+  sudo: yes
+  service: name=httpd state=restarted
+

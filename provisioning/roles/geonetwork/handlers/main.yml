@@ -1,0 +1,17 @@
+# file: geonetwork/handlers/main.yml
+
+- name: restart tomcat
+  sudo: yes
+  service: name={{ tomcat_version }} state=restarted
+
+- name: stop tomcat
+  sudo: yes
+  service: name={{ tomcat_version }} state=stop
+
+- name: start tomcat
+  sudo: yes
+  service: name={{ tomcat_version }} state=start
+
+- include: ../../postgresql/handlers/main.yml
+
+

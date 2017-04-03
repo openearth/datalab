@@ -1,0 +1,10 @@
+# ansible-playbook --inventory-file=provisioning/inventory_otap -vvvv --limit="development" provisioning/_playbooks/test_geonetwork3_deployment.yml
+
+
+- hosts: all
+  connection: ssh
+  remote_user: vagrant
+  roles:
+    - role: ../roles/geonetwork3
+      tags:
+        geonetwork3

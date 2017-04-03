@@ -1,0 +1,141 @@
+.photoheader {
+  height: 300px;
+  padding: 10px;
+  color: rgba(0,0,0,.5);
+  background: url(//farm4.staticflickr.com/3709/11996621926_e6fa2f319c_b.jpg) no-repeat bottom center fixed;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+}
+.photoheader-small {
+  height: 100px;
+}
+
+.photoheader .header_photo_ref {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 10px;
+}
+
+.photoheader .title {
+  position: absolute;
+  top: 110px;
+  left: 40px;
+  width: 260px;
+  color: #fff;
+  background: #000;
+  font-size: 2em;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px;
+}
+.photoheader-small .title{
+  top: 20px;
+}
+
+.photoheader .header_description {
+  position: absolute;
+  top: 90px;
+  right: 40px;
+  width: 360px;
+  color: #000;
+  background: #fff;
+  padding: 10px;
+}
+.photoheader-small .header_description{
+  display: none;
+}
+
+.row-appdescs {
+  margin-top:40px;
+}
+
+.col-appdesc {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+#page-wrapper-nonavleft {
+  padding: 0 15px;
+}
+
+.navbar-text{
+  margin-right: 15px;
+  margin-left: 15px;
+}
+
+.navbar-alwaysright{
+  float: right;
+}
+
+.table-responsive {
+  border: none;
+  overflow: auto;
+}
+
+footer .navbar-default,
+header .navbar-static-top {
+  background: #fff;
+}
+
+footer .navbar-text {
+  line-height: 30px;
+}
+
+footer .navbar-text img {
+  max-height: 30px;
+  max-width: 100px;
+  margin: 0 5px;
+}
+
+.navbar-nav {
+  margin: 0;
+}
+
+.navbar-nav>li {
+  border-right: 1px solid #e7e7e7;
+}
+
+.row:last-child {
+  margin-bottom: 80px;
+}
+
+@media (max-width: 767px) {
+  .navbar-nav .open .dropdown-menu {
+    position: absolute;
+    float: left;
+    margin: 2px 0 0;
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+  }
+
+  .row:last-child {
+    margin-bottom: 100px;
+  }
+
+  .photoheader .title {
+    top: 50px;
+  }
+  .photoheader-small .title{
+    top: 20px;
+  }
+
+  .photoheader .header_description {
+    top: 150px;
+    right: auto;
+    left: 40px;
+  }
+
+  .login-panel {
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 865px) {
+  footer .navbar-text img {
+    max-width: 40px;
+  }
+}

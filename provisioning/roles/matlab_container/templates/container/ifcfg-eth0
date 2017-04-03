@@ -1,0 +1,4 @@
+DEVICE=eth0
+BOOTPROTO=dhcp
+ONBOOT=yes
+MACADDR="{{ matlab_container_mac_address }}"

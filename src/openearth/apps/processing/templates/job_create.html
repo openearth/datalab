@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load i18n l10n %}
+
+{% block title %}
+    {% trans "New job" %}
+{% endblock %}
+
+{% block content %}
+    {% include "job_base.html" with title=_('New job') %}
+{% endblock %}
+
+{% block extra-bottom-slot %}
+    {# if we have a form this means that the svn repo is valid #}
+    {% if form %}
+        <script>
+            (function ($) {
+                var scripts_url = '{% url "scripts" env=view.kwargs.env %}';
+
+                function fetchScriptRevisions() {
+                    $.getJSON(scripts_url + $(this).val(), function (data) {
+                        var select = $('#id_script_revision');
+                        var option = select.children()[0];
+                        select.empty().append(option);
+                        $.each(data, function (i, revision) {
+                            select.append($('<option>').attr('value', revision[0]).text(revision[1]));
+                        });
+                    });
+                }
+
+                $('#id_script').change(fetchScriptRevisions).change();
+
+                // Opening accordion based on URL
+                var url = document.location.toString();
+                if (url.match('#')) {
+                    $('#' + url.split('#')[1]).collapse('show');
+                }
+
+                /* Bootstrapify the forms */
+                $('form input, form select').addClass('form-control');
+                $('form select').css('width', '100%').select2();
+
+                $('#id_open_earth_revision').select2({
+                    placeholder: {
+                        id: '',
+                        text: 'Latest revision',
+                    },
+                    ajax: {
+                        url: '{% url "open_earth_revisions" env=view.kwargs.env extension='' %}',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function(params){
+                            console.log('data', arguments);
+                            return {
+                                revision: params.revision,
+                            };
+                        },
+                        processResults: function (data, params) {
+                            if(data){
+                                params.revision = data[data.length-1]['@revision'];
+                            }else{
+                                params.revision = '';
+                            }
+
+                            return {
+                                results: data,
+                                pagination: {
+                                    more: data.length >= 100
+                                }
+                            };
+                        },
+                    },
+                    escapeMarkup: function (markup) { return markup; }, // let our custom formatter work
+                    templateResult: function(object){
+                        if(!object || !object['@revision'])return 'Loading...';
+
+                        var markup = '<div class="clearfix">' +
+                            '<strong>' + object.author + ':</strong> ' +
+                            (object.msg || '') +
+                            '<br>' + 
+                            '<small>' +
+                                '<strong>' + object['@revision'] + '</strong> ' +
+                                object.date +
+                            '</small>' +
+                            '</div>';
+                        return markup;
+                    },
+                    templateSelection: function(object){
+                        if(object.text)return object.text;
+
+                        return '[' + object['@revision'] + '] ' +
+                            object.msg + ' @ ' +
+                            object.date + ' by ' +
+                            object.author;
+                    },
+                });
+
+            })(jQuery);
+        </script>
+    {% endif %}
+{% endblock %}

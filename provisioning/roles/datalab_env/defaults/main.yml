@@ -1,0 +1,15 @@
+---
+
+worker_ssh_key_name: id_rsa_worker # Name of key in /home/{{app_user}}/.ssh/
+lxc_hostname: worker
+app_settings: prod
+
+uwsgi_user: uwsgi
+uwsgi_group: uwsgi
+
+default_opendap_dir: /var/lib/opendap
+django_secret_key: "django_secret_key"
+environment_svn_url: "https://{{ ansible_fqdn }}/repos/openearth/"
+environment_svn_username: zmworker
+environment_svn_password: zmworker
+sentry_dsn: ""

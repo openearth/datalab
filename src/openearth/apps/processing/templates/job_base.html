@@ -1,0 +1,113 @@
+{% load i18n %}
+<div class="row">
+    <div class="col-lg-12">
+        <h1 class="page-header">{{ title|title }}{{ object.name|title }}</h1>
+        {% for message in messages %}
+            <div {% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                {% blocktrans with env=object.environment.name title=title %}{{ title }} for {{ env }}
+                    environment{% endblocktrans %}
+            </div>
+
+            {% with invalid_repo=env.invalid_repo %}
+                {% if invalid_repo %}
+                    <div class="alert alert-danger" role="alert" title="{{ invalid_repo }}">
+                        <strong>Warning!</strong> This repository does not exist anymore. Creating new jobs with this
+                        repository is not possible.
+
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="job-detail-table">
+                            <tbody>
+                            <tr>
+                                <th class="col-sm-3"><label class="control-label" for="">SVN repo url</label></th>
+                                <td class="col-sm-9"><a href="{{ env.get_repo_url }}">{{ env.get_repo_url }}</a></td>
+                            </tr>
+                            <tr>
+                                <th class="col-sm-3"><label class="control-label" for="">Name</label></th>
+                                <td class="col-sm-9">{{ env.name }}</td>
+                            </tr>
+                            <tr>
+                                <th class="col-sm-3"><label class="control-label" for="">OpenEarthTools</label></th>
+                                <td class="col-sm-9" id="job-status-field">{% if env.open_earth %}enabled{% else %}
+                                    disabled{% endif %}</td>
+                            </tr>
+                            <tr>
+                                <th class="col-sm-3"><label class="control-label" for="">Created date</label></th>
+                                <td class="col-sm-9">{{ env.created_date }}</td>
+                            </tr>
+                            <tr>
+                                <th class="col-sm-3"><label class="control-label" for="">Processing environment</label>
+                                </th>
+                                <td class="col-sm-9">
+                                    {{ env.libvirt_image.name }}
+                                    <p class="help-block">{{ env.libvirt_image.description }}</p>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+                {% if not invalid_repo %}
+                    <!-- /.panel-heading -->
+                    <div class="panel-body">
+                        <div class="table-responsive">
+                            <form action="" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="environment" value="{{ object.environment.id }}">
+                                <table class="table table-hover">
+                                    {% include "forms/as_table.html" %}
+                                </table>
+
+                                <div class="panel-group" role="tablist">
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading" role="tab" id="collapseAdvancedSettingsHeading">
+                                            <h4 class="panel-title">
+                                                <a class="collapsed" data-toggle="collapse"
+                                                   href="#collapseAdvancedSettings" aria-expanded="false"
+                                                   aria-controls="collapseAdvancedSettings">
+                                                    Advanced settings
+                                                </a>
+                                            </h4>
+                                        </div>
+                                        <div id="collapseAdvancedSettings" class="panel-collapse collapse"
+                                             role="tabpanel" aria-labelledby="collapseAdvancedSettingsHeading"
+                                             aria-expanded="false" style="height: 0px;">
+                                            <table class="table table-hover">
+                                                {% with group='advanced' %}
+                                                    {% include "forms/as_table.html" %}
+                                                {% endwith %}
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+
+                                <input class="btn btn-primary" {% if invalid_repo %}disabled="disabled"{% endif %}
+                                       type="submit" name="submit" value="{% trans "Schedule" %}">
+                            </form>
+                        </div>
+                        <!-- /.table-responsive -->
+                    </div>
+                    <!-- /.panel-body -->
+                {% endif %}
+
+
+            {% endwith %}
+        </div>
+        <!-- /.panel -->
+    </div>
+
+</div>
+<!-- /.row -->

@@ -1,0 +1,8 @@
+---
+
+- name: log provisioning done
+  sudo: yes
+  shell: 'echo *** provisioning done: $(date) >> /var/log/provisioning/provisioning.log'
+  notify: log provisioning done
+
+

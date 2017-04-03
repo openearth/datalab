@@ -1,0 +1,5 @@
+[openearth-datalab]
+name=openearth-datalab
+baseurl=http://3tudc-libbuild.tudelft.nl/rpm/repos/openearth-datalab/
+gpgcheck=0
+enabled=1

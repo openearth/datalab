@@ -1,0 +1,193 @@
+---
+
+#
+# Prepare app environment
+#
+
+- name: app user create
+  sudo: yes
+  user: name={{ app_user }} system=yes state=present
+
+- name: app group create
+  sudo: yes
+  group: name={{ app_group }} system=yes state=present
+
+- name: chown app dir
+  sudo: yes
+  file: path=/srv/{{ app_module }} owner={{ app_user }} group={{ app_group }} mode=0775 state=directory
+
+- name: Create log, media, static and asset folders
+  sudo: yes
+  file: path=/srv/{{ app_module }}/{{ item }} state=directory group={{ app_group }} owner={{ app_user }} mode=0755
+  register: static_folder
+  with_items:
+   - log
+   - media
+   - static
+   - assets
+   - media/docs
+
+- name: Give the upload documentation folder the correct permissions on external servers
+  sudo: yes
+  command: chown openearth:uwsgi /srv/{{ app_module }}/media/docs
+  when: not ansible_env.USER == 'vagrant'
+
+- name: Give the files the correct permissions on external servers
+  sudo: yes
+  command: chmod 775 /srv/{{ app_module }}/media/docs/ -R
+  when: not ansible_env.USER == 'vagrant'
+
+- name: Give the upload documentation folder the correct permissions on development
+  sudo: yes
+  command: chown vagrant:vagrant /srv/{{ app_module }}/media/docs
+  when: ansible_env.USER == 'vagrant'
+
+- name: Give the files the correct permissions on development
+  sudo: yes
+  command: chmod 775 /srv/{{ app_module }}/media/docs/ -R
+  when: ansible_env.USER == 'vagrant'
+
+# ldap package development
+- name: yum packages for ldap development django
+  sudo: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - openldap-devel
+
+- name: yum packages for working with netcdfs
+  sudo: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - netcdf-devel
+    - hdf5-devel
+    - python27-netcdf4
+    - nco
+
+# Configure openearth app
+- name: check if requirements file exists
+  sudo: yes
+  stat: path=/srv/{{ app_module }}/src/requirements.txt
+  register: st_req
+
+- name: pip install numpy
+  sudo: yes
+  sudo_user: "{{ app_user }}"
+  environment:
+    PATH: /srv/{{ app_module }}/venv/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+  pip: executable=/srv/{{ app_module }}/venv/bin/pip
+       chdir=/srv/{{ app_module }}/src/
+       name=numpy
+       version=1.8.1
+       virtualenv=/srv/{{ app_module }}/venv
+       virtualenv_command=/opt/python2.7/bin/virtualenv
+  register: venv
+  when: st_req.stat.exists
+
+- name: pip install cython
+  sudo: yes
+  sudo_user: "{{ app_user }}"
+  environment:
+    PATH: /srv/{{ app_module }}/venv/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+  pip: executable=/srv/{{ app_module }}/venv/bin/pip
+       chdir=/srv/{{ app_module }}/src/
+       name=Cython
+       version=0.20
+       virtualenv=/srv/{{ app_module }}/venv
+       virtualenv_command=/opt/python2.7/bin/virtualenv
+  register: venv
+  when: st_req.stat.exists
+
+- name: pip install requirements
+  sudo: yes
+  sudo_user: "{{ app_user }}"
+  environment:
+    PATH: /srv/{{ app_module }}/venv/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+  pip: chdir=/srv/{{ app_module }}/src/
+       requirements=/srv/{{ app_module }}/src/requirements.txt
+       virtualenv=/srv/{{ app_module }}/venv
+       virtualenv_command=/opt/python2.7/bin/virtualenv
+  register: venv
+  when: st_req.stat.exists
+
+- name: app etc dir
+  sudo: yes
+  file: path=/srv/{{ app_module }}/etc owner={{ app_user }} group={{ app_group }} mode=0755 state=directory
+
+# create openearth database
+- include: database.yml tags=openearth_env
+
+# Configure uwsgi
+- include: uwsgi.yml tags=openearth_env,uwsgi
+
+# Make sure nginx, httpd etc are running
+- name: flush handlers
+  meta: flush_handlers
+
+- name: create app_user .ssh dir
+  sudo: yes
+  sudo_user: "{{ app_user }}"
+  file: path=/home/{{ app_user }}/.ssh/ mode=0700 state=directory
+
+- name: generate ssh key to use when connecting to worker
+  sudo: yes
+  sudo_user: "{{ uwsgi_user }}"
+  command: /usr/bin/ssh-keygen -q -t rsa -f /home/{{ uwsgi_user }}/.ssh/{{ worker_ssh_key_name }} -N "" creates=/home/{{ uwsgi_user }}/.ssh/{{ worker_ssh_key_name }}
+
+- name: create vagrant .ssh dir
+  file: path=/home/vagrant/.ssh/ mode=0700 state=directory
+  when: ansible_virtualization_type == "virtualbox" or is_docker == true
+
+- name: copy ssh keys from wsgi_user
+  sudo: yes
+  command: cp /home/{{ uwsgi_user }}/.ssh/{{ item }} /home/vagrant/.ssh/{{ item }} creates=/home/vagrant/.ssh/{{ item }}
+  when: ansible_virtualization_type == "virtualbox" or is_docker == true
+  with_items:
+    - "{{ worker_ssh_key_name }}"
+    - "{{ worker_ssh_key_name }}.pub"
+
+- name: set ssh key permissions for vagrant
+  sudo: yes
+  file: path={{ item }} mode=0600 owner=vagrant group=vagrant
+  when: ansible_virtualization_type == "virtualbox" or is_docker == true
+  with_items:
+    - /home/vagrant/.ssh/{{ worker_ssh_key_name }}
+    - /home/vagrant/.ssh/{{ worker_ssh_key_name }}.pub
+
+# Allows celery tasks, unittests etc to write into opendap directory
+- name: give OPEnDAP data dir {{ uwsgi_user }} group
+  sudo: yes
+  file: path=/data/opendap state=directory recurse=yes group={{ uwsgi_user }} mode=0775
+
+# Allows celery tasks, unittests etc to write into opendap directory
+- name: give kml dir {{ uwsgi_user }} group
+  sudo: yes
+  file: path=/data/kml state=directory recurse=yes group={{ uwsgi_user }} mode=0775
+
+# Run database migrations, syncdb, collectstatic
+- name: run database migrations, syncdb, collectstatic
+  sudo: yes
+  sudo_user: "{{ app_user }}"
+  django_manage:
+    command={{ item }}
+    app_path=/srv/{{ app_module }}/src
+    settings={{ app_module }}.settings.{{ app_settings }}
+    pythonpath=/srv/{{ app_module }}/venv/bin/python
+    virtualenv=/srv/{{ app_module }}/venv
+  with_items:
+    - syncdb
+    - collectstatic
+    - migrate
+  ignore_errors: True
+
+# Run database migrations again to fix contenttype issues...
+- name: run database migrations again...
+  sudo: yes
+  sudo_user: "{{ app_user }}"
+  django_manage:
+    command={{ item }}
+    app_path=/srv/{{ app_module }}/src
+    settings={{ app_module }}.settings.{{ app_settings }}
+    pythonpath=/srv/{{ app_module }}/venv/bin/python
+    virtualenv=/srv/{{ app_module }}/venv
+  with_items:
+    - migrate

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load cms_tags %}
+
+{% block content %}
+
+  {% if user.is_authenticated %}
+    <div class="row" style="margin-bottom:40px;">
+      <div class="col-md-12">
+        <div class="col-md-12">
+            <h1>{% page_attribute 'title' %}</h1>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="row row-appdescs">
+    <div class="col-md-12">
+
+      <div class="col-lg-3 col-appdesc">
+          <a class="btn btn-default" href="{{ svn_url }}" role="button" target="_blank">
+          <i class="fa fa-code-fork fa-4x"></i>
+
+          <h2>SVN Repo</h2>
+
+          <p>Repository for observations<br/>and processing scripts.</p>
+          <span class="btn btn-primary">
+            {% if user.is_authenticated %}Open{% else %}Login{% endif %} &raquo;
+          </span>
+        </a>
+      </div>
+
+      <div class="col-lg-3 col-appdesc">
+        <a class="btn btn-default" href="{% url 'environment' %}" role="button">
+          <i class="fa fa-briefcase fa-4x"></i>
+
+          <h2>Environments</h2>
+
+          <p>Processing environment<br/>management.</p>
+          <span class="btn btn-primary">
+            {% if user.is_authenticated %}Open{% else %}Login{% endif %} &raquo;
+          </span>
+        </a>
+      </div>
+
+      <!--<div class="col-lg-3 col-appdesc">-->
+      <!--<i class="fa fa-globe fa-4x"></i>-->
+      <!--<h2>GeoExplorer</h2>-->
+      <!--<p>The web-interface for exploring processed data.</p>-->
+      <!--{% if user.is_authenticated %}-->
+        <!--<p><a class="btn btn-primary" href="/geoexplorer/composer/" role="button" target="_blank">Open &raquo;</a></p>-->
+        <!--{% endif %}-->
+      <!--</div>-->
+
+      <div class="col-lg-3 col-appdesc">
+        <a class="btn btn-default" href="/thredds/catalog.html" role="button" target="_blank">
+          <i class="fa fa-table fa-4x"></i>
+
+          <h2>Thredds</h2>
+
+          <p>The TDS to acces the<br/>generated NetCDF files.</p>
+          <span class="btn btn-primary">
+            {% if user.is_authenticated %}Open{% else %}Login{% endif %} &raquo;
+          </span>
+        </a>
+      </div>
+
+      <div class="col-lg-3 col-appdesc">
+        <a class="btn btn-default" href="{% url 'kmlserver' %}" role="button" target="_blank">
+          <i class="fa fa-file-code-o fa-4x"></i>
+
+          <h2>KML Server</h2>
+
+          <p>Download KML files.</p>
+          <span class="btn btn-primary">
+            {% if user.is_authenticated %}Open{% else %}Login{% endif %} &raquo;
+          </span>
+        </a>
+      </div>
+
+      <!--<div class="col-lg-3 col-appdesc">-->
+      <!--<i class="fa fa-sitemap fa-4x"></i>-->
+      <!--<h2>Geonetwork</h2>-->
+      <!--<p>GeoNetwork catalog application.</p>-->
+      <!--{% if user.is_authenticated %}-->
+        <!--<p><a class="btn btn-primary" href="/geonetwork/" role="button" target="_blank">Open &raquo;</a></p>-->
+        <!--{% endif %}-->
+      <!--</div>-->
+
+    </div>
+  </div>
+
+{% endblock %}

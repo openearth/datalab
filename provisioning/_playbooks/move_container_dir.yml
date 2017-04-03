@@ -1,0 +1,15 @@
+---
+
+# Move /srv/openearth/containers to /data, in case it already exists.
+# Afterwards run provisioning again. This is not required on a fresh provisioned
+# instance.
+#
+# ansible-playbook -i provisioning/hosts.cfg provisioning/move_container_dir.yml --limit=vagrant* -vvvv -u vagrant --private-key=~/.vagrant.d/insecure_private_key
+
+- hosts: all
+  connection: ssh
+
+  tasks:
+    - name: move container dir
+      sudo: yes
+      command: mv /srv/openearth/containers /data creates=/data/containers

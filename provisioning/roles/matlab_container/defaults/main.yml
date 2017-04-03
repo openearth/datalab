@@ -1,0 +1,3 @@
+---
+worker_ssh_key_name: id_rsa_worker # Name of key in /home/{{app_user}}/.ssh/
+lxc_hostname: worker

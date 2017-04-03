@@ -1,0 +1,37 @@
+# Creates additional storage volume, mounted on /data
+- name: Check if /dev/sdb1 is formatted or has partition
+  sudo: yes
+  shell: "/sbin/parted -l |grep /dev/sdb | awk '{print $2}'| sed $'s/\r//'"
+  register: sdb_no_partitions
+
+- name: echo
+  command: echo {{sdb_no_partitions.stdout}}
+  when: sdb_no_partitions.stdout == "Error:"
+
+- name: Create partition label
+  sudo: yes
+  command: /sbin/parted /dev/sdb --script mklabel msdos
+  when: sdb_no_partitions.stdout == "Error:"
+
+- name: Create partition
+  sudo: yes
+  command: /sbin/parted /dev/sdb --script mkpart primary 0 -- -1
+  when: sdb_no_partitions.stdout == "Error:"
+
+# Make label
+- name: Format sdb if required
+  sudo: yes
+  filesystem: fstype=ext4 dev=/dev/sdb1
+  when: sdb_no_partitions.stdout == "Error:"
+
+# /data is the mountpoint for /dev/sdb1
+- name: make sure /data is there
+  sudo: yes
+  file: path=/data state=directory mode=0755
+
+- name: Mount /dev/sdb1
+  sudo: yes
+  mount: src=/dev/sdb1 name=/data state=mounted fstype=ext4
+#
+#- name: mount /dev/sdb to /data
+#  command:

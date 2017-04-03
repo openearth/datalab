@@ -1,0 +1,193 @@
+---
+
+# initial LDAP install and config
+
+- name: installing LDAP dependencies
+  sudo: yes
+  yum: name={{item}} state=present
+  with_items:
+    - openldap-servers
+    - openldap-clients
+
+- name: activate slapd on startup
+  sudo: yes
+  command: chkconfig slapd on
+
+- name: restart slapd
+  sudo: yes
+  command: /etc/init.d/slapd restart
+
+- name: copy ldap config
+  sudo: yes
+  copy: src=ldap dest=/etc/sysconfig/ldap
+  notify: restart slapd
+
+- name: copy slapd config
+  sudo: yes
+  copy: src=slapd.conf dest=/etc/openldap/slapd.conf
+  notify: restart slapd
+
+- name: remove slapd config clutter
+  sudo: yes
+  command: rm -rf /etc/openldap/slapd.d/*
+  notify: restart slapd
+
+- name: run slaptest
+  sudo: yes
+  command: slaptest -f /etc/openldap/slapd.conf -F /etc/openldap/slapd.d
+
+- name: copy olcdatabase config settings
+  sudo: yes
+  copy: src=olcDatabase={0}config.ldif dest=/etc/openldap/slapd.d/olcDatabase={0}config.ldif
+  notify: restart slapd
+
+- name: copy olcdatabase monitor settings
+  sudo: yes
+  copy: src=olcDatabase={1}monitor.ldif dest=/etc/openldap/slapd.d/olcDatabase={1}monitor.ldif
+  notify: restart slapd
+
+- name: change slapd config ownership
+  sudo: yes
+  command: chown -R ldap. /etc/openldap/slapd.d
+
+- name: change slapd config exec rights
+  sudo: yes
+  command: chmod -R 700 /etc/openldap/slapd.d
+
+# Somehow the service module fails on this one wit a JSON Decode error
+- name: restart slapd
+  sudo: yes
+  command: /etc/init.d/slapd restart
+#  service: name=slapd state=restarted
+
+# LAM install and config
+
+- name: install LAM dependencies
+  sudo: yes
+  yum: name={{item}} state=present
+  with_items:
+    - php
+    - php-ldap.x86_64
+
+- name: get LAM tarball
+  sudo: yes
+  # TODO: replace with  get-url
+  command: wget -q http://downloads.sourceforge.net/project/lam/LAM/4.3/ldap-account-manager-4.3.tar.bz2 -P /tmp creates=/tmp/ldap-account-manager-4.3.tar.bz2
+
+- name: unpack LAM tarball
+  sudo: yes
+  command: chdir=/tmp/ tar -xjf ldap-account-manager-4.3.tar.bz2
+
+- name: configure LAM make
+  sudo: yes
+  command: chdir=/tmp/ldap-account-manager-4.3/ ./configure --with-httpd-user=apache --with-httpd-group=apache --with-web-root=/var/www/html/lam/
+
+- name: make install LAM
+  sudo: yes
+  command: chdir=/tmp/ldap-account-manager-4.3/ make install
+
+- name: copy LAM superuser config
+  sudo: yes
+  template: src=config.cfg dest=/usr/local/lam/etc/config.cfg
+  notify: restart httpd
+
+- name: copy openearth config
+  sudo: yes
+  template: src=openearth.conf dest=/usr/local/lam/etc/openearth.conf
+  notify: restart httpd
+
+- name: change LAM config files ownership
+  sudo: yes
+  command: chown -R apache. /var/www/html/lam/config/
+
+- name: change LAM config files exec rights
+  sudo: yes
+  command: chmod -R 700 /var/www/html/lam/config/
+
+- name: restart slapd
+  sudo: yes
+#  service: name=slapd state=restarted
+  command: /etc/init.d/slapd restart
+
+- name: restart LAM supporting services
+  sudo: yes
+  service: name=httpd state=restarted
+
+# actual LDAP dB config
+- name: query LDAP
+  sudo: yes
+  command: "ldapsearch -x -b 'dc={{ldap_dc_first}},dc={{ldap_dc_second}}'"
+  register: query_result
+  ignore_errors: yes
+
+# backend
+
+- name: copy LDAP backend schema
+  sudo: yes
+  template: src=backend.ldif dest=/etc/openldap/schema/backend.ldif
+  register: ldap_backend_schema
+
+- name: copy LDAP backend schema modifications
+  sudo: yes
+  template: src=backend_modify.ldif dest=/etc/openldap/schema/backend_modify.ldif
+  register: ldap_backend_schema_modify
+
+- name: add LDAP backend schema
+  sudo: yes
+  command: "ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/backend.ldif"
+  notify: restart slapd
+  when: "query_result.stdout.find('dn: dc={{ldap_dc_first}},dc={{ldap_dc_second}}') == -1 and ldap_backend_schema['changed']"
+
+- name: modify LDAP backend schema
+  sudo: yes
+  command: "ldapmodify -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/backend_modify.ldif"
+  notify: restart slapd
+  when: "query_result.stdout.find('dn: dc={{ldap_dc_first}},dc={{ldap_dc_second}}') != -1 and ldap_backend_schema_modify['changed']"
+
+# frontend
+
+- name: copy LDAP frontend schema
+  sudo: yes
+  template: src=frontend.ldif dest=/etc/openldap/schema/frontend.ldif
+  register: ldap_frontend_schema
+
+- name: copy LDAP frontend schema modifications
+  sudo: yes
+  template: src=frontend_modify.ldif dest=/etc/openldap/schema/frontend_modify.ldif
+  register: ldap_frontend_schema_modify
+
+- name: add LDAP frontend schema
+  sudo: yes
+  command: "ldapadd -x -D cn=admin,dc={{ldap_dc_first}},dc={{ldap_dc_second}} -w {{ldap_admin_passwd}} -f /etc/openldap/schema/frontend.ldif"
+  notify: restart slapd
+  when: "query_result.stdout.find('dn: dc={{ldap_dc_first}},dc={{ldap_dc_second}}') == -1 and ldap_frontend_schema['changed']"
+
+- name: modify LDAP frontend schema
+  sudo: yes
+  command: "ldapmodify -x -D cn=admin,dc={{ldap_dc_first}},dc={{ldap_dc_second}} -w {{ldap_admin_passwd}} -f /etc/openldap/schema/frontend_modify.ldif"
+  notify: restart slapd
+  when: "query_result.stdout.find('dn: dc={{ldap_dc_first}},dc={{ldap_dc_second}}') != -1 and ldap_frontend_schema_modify['changed']"
+
+# initial data
+
+- name: copy LDAP initial data
+  sudo: yes
+  template: src=initial_data.ldif dest=/etc/openldap/schema/initial_data.ldif
+  register: ldap_initial_data
+
+- name: copy LDAP initial data modifications
+  sudo: yes
+  template: src=initial_data_modify.ldif dest=/etc/openldap/schema/initial_data_modify.ldif
+  register: ldap_initial_data_modify
+
+- name: add LDAP initial_data
+  sudo: yes
+  command: "ldapadd -x -D cn=admin,dc={{ldap_dc_first}},dc={{ldap_dc_second}} -w {{ldap_admin_passwd}} -f /etc/openldap/schema/initial_data.ldif"
+  notify: restart slapd
+  when: "query_result.stdout.find('cn: oe_admin') == -1 and query_result.stdout.find('cn: zm_admin') == -1 and ldap_initial_data['changed']"
+
+- name: modify LDAP initial_data
+  sudo: yes
+  command: "ldapmodify -x -D cn=admin,dc={{ldap_dc_first}},dc={{ldap_dc_second}} -w {{ldap_admin_passwd}} -f /etc/openldap/schema/initial_data_modify.ldif"
+  notify: restart slapd
+  when: "query_result.stdout.find('cn: oe_admin') != -1 and query_result.stdout.find('cn: zm_admin') != -1 and ldap_initial_data_modify['changed']"

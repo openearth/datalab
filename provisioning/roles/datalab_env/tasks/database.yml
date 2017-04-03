@@ -1,0 +1,35 @@
+---
+
+# Database creation
+- name: create openearth database role without CREATEDB
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user: name={{ django_database_user }} password={{ django_database_pass }} role_attr_flags=NOCREATEDB
+  when: ansible_virtualization_type != "virtualbox" and is_docker == false
+
+- name: create openearth database role with CREATEDB, SUPERUSER
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user: name={{ django_database_user }} password={{ django_database_pass }} role_attr_flags=CREATEDB,SUPERUSER
+  when: ansible_virtualization_type == "virtualbox" or is_docker == true
+
+- name: create openearth database
+  sudo: yes
+  sudo_user: postgres
+  postgresql_db: name={{ django_database_name }} encoding=UTF-8 lc_collate=en_US.UTF-8 lc_ctype=en_US.UTF-8 owner={{ django_database_user }}
+
+- name: Check if postgis extensions are installed
+  sudo: yes
+  sudo_user: postgres
+  command: psql -c "SELECT PostGIS_full_version();" --dbname={{ django_database_name }}
+  register: psql_gis
+  ignore_errors: True
+
+- name: Add postgis extensions
+  sudo: yes
+  sudo_user: postgres
+  command: psql --dbname={{ django_database_name }} -c "CREATE EXTENSION  {{ item }}";
+  with_items:
+    - postgis
+    - postgis_topology
+  when: psql_gis|failed

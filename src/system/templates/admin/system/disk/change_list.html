@@ -1,0 +1,134 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls admin_static admin_list %}
+
+{% block extrastyle %}
+{{ block.super }}
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'js/jquery-1.10.2.js' %}" charset="utf-8"></script>
+<script src="{% static 'js/highcharts.js' %}" charset="utf-8"></script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=app_label %}">{{ app_label|capfirst|escape }}</a>
+    &rsaquo; {{ opts.verbose_name_plural|capfirst }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    {% block object-tools %}
+    {% if has_add_permission %}
+    <ul class="object-tools">
+        {% block object-tools-items %}
+        <li>
+        {% url cl.opts|admin_urlname:'add' as add_url %}
+        <a href="{% add_preserved_filters add_url is_popup %}" class="addlink">
+            {% blocktrans with opts.verbose_name as name %}Add {{ name }}{% endblocktrans %}
+        </a>
+        </li>
+        {% endblock %}
+    </ul>
+    {% endif %}
+    {% endblock %}
+    <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+
+        <form id="changelist-form" action="" method="post"{% if cl.formset.is_multipart %} enctype="multipart/form-data"{% endif %}>{% csrf_token %}
+            {% if cl.formset %}
+            <div>{{ cl.formset.management_form }}</div>
+            {% endif %}
+
+            {% block result_list %}
+
+            <table>
+                <tr>
+                    <th>Disk</th>
+                    <th>Free</th>
+                    <th>Used</th>
+                    <th>Reserved (system)</th>
+                    <th>Size</th>
+                </tr>
+
+                {% for mount in mounts %}
+                <tr>
+                    <td>{{ mount.name }}</td>
+                    <td>{{ mount.free|filesizeformat }}</td>
+                    <td>{{ mount.used|filesizeformat }}</td>
+                    <td>{{ mount.reserved|filesizeformat }}</td>
+                    <td>{{ mount.size|filesizeformat }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+
+            {% for mount in mounts %}
+            <div id="pie-{{ mount.name|slugify }}" style="width:400px; height:200px; float: left;"></div>
+            {% endfor %}
+
+            <script type="text/javascript">
+                $(function () {
+                    var pieOptions = {
+                        chart: {
+                            plotBackgroundColor: null,
+                            plotBorderWidth: null,
+                            plotShadow: false
+                        },
+                        tooltip: {
+                            pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b> {point.value}'
+                        },
+                        plotOptions: {
+                            pie: {
+                                allowPointSelect: true,
+                                cursor: 'pointer',
+                                dataLabels: {
+                                    enabled: true,
+                                    format: '<b>{point.name}</b>: {point.percentage:.1f}% {point.value}',
+                                    style: {
+                                        color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black',
+                                    },
+                                },
+                                showInLegend: true,
+                            }
+                        },
+                    };
+
+                    {% for mount in mounts %}
+                    $('#pie-{{ mount.name|slugify }}').highcharts($.extend({
+                        title: {
+                            text: 'Disk usage on {{ mount.name|escapejs }}'
+                        },
+                        series: [{
+                            type: 'pie',
+                            name: '{{ mount.name|escapejs }}',
+                            data: [{
+                                name: 'Used', 
+                                color: '#BD0B0B',
+                                y: {{ mount.used }},
+                                value: '{{ mount.used|filesizeformat }}'
+                            {% if mount.reserved %}
+                            }, {
+                                name: 'Reserved', 
+                                color: '#077171',
+                                y: {{ mount.reserved }},
+                                value: '{{ mount.reserved|filesizeformat }}'
+                            {% endif %}
+                            }, {
+                                name: 'Free', 
+                                color: '#79B00A',
+                                y: {{ mount.free }},
+                                value: '{{ mount.free|filesizeformat }}'
+                            }]
+                        }]
+                    }, pieOptions));
+                    {% endfor %}
+                });
+            </script>
+
+            {% endblock %}
+        </form>
+    </div>
+</div>
+{% endblock %}

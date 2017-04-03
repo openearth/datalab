@@ -1,0 +1,31 @@
+---
+  - name: stop uwsgi
+    sudo: yes
+    ignore_errors: True
+    command: initctl stop uwsgi
+
+  - name: start uwsgi
+    sudo: yes
+    command: initctl start uwsgi
+
+  # Celery will restarted by uwsgi emperor, after killing it.
+  - name: kill celery
+    sudo: yes
+    ignore_errors: True
+    shell: ps aux |grep celery |grep -v grep |head -1 |awk '{print $2}' | xargs kill
+
+  - name: run database migrations
+    sudo: yes
+    sudo_user: "{{ app_user }}"
+    django_manage:
+      command={{ item }}
+      app_path=/srv/{{ app_module }}/src
+      settings={{ app_module }}.settings.{{app_settings}}
+      pythonpath=/srv/{{ app_module }}/venv/bin/python
+      virtualenv=/srv/{{ app_module }}/venv
+    with_items:
+      - syncdb
+      - collectstatic
+      - migrate
+
+

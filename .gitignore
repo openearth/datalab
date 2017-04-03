@@ -1,0 +1,12 @@
+.idea
+*.pyc
+*.log
+*.pyh
+*.db
+*.DS_Store
+.vagrant*
+Vagrantfile.local
+.tmuxrc
+/src/openearth/settings/local.py
+certificates/
+provisioning/host_vars/

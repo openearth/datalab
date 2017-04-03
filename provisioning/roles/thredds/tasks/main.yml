@@ -1,0 +1,82 @@
+---
+
+- name: install thredds
+  sudo: yes
+  yum: name=thredds state=present
+  notify: restart tomcat6
+
+- name: copy thredds config
+  sudo: yes
+  copy: src=web.xml dest=/usr/share/tomcat6/webapps/thredds/WEB-INF/web.xml
+  notify: restart tomcat6
+
+# Move thredds datadir
+- name: make sure /data is there
+  sudo: yes
+  file: path=/data state=directory mode=0755
+
+- name: wait until tomcat unpacks thredds data dir
+  wait_for: path={{default_thredds_dir}}/catalog.xml
+
+- name: stat thredds datadir
+  stat: path={{default_thredds_dir}}
+  register: st_thredds
+
+- name: move thredds datadir
+  sudo: yes
+  command: mv {{default_thredds_dir}} {{thredds_data_dir}}
+  #command: mv {{default_thredds_dir}} /data
+  when: st_thredds.stat.exists and st_thredds.stat.isdir
+
+- name: copy thredds catalog
+  sudo: yes
+  copy: src=catalog.xml dest=/data/thredds/catalog.xml
+  notify: restart tomcat6
+
+- name: copy thredds threddsConfig
+  sudo: yes
+  copy: src=threddsConfig.xml dest=/data/thredds/threddsConfig.xml
+  notify: restart tomcat6
+
+- name: symlink thredds datadir
+  sudo: yes
+  file: src={{thredds_data_dir}} dest={{default_thredds_dir}} state=link
+  when: st_thredds.stat.exists and st_thredds.stat.islnk == false
+  notify: restart tomcat6
+
+- name: stat OPEnDAP datadir 1
+  stat: path={{default_opendap_dir}}
+  register: st_opendap_1
+
+# Somehow the new thredds (4.3-25) package does not create this dir anymore.
+- name: create opendap dir
+  sudo: yes
+  file: path={{default_opendap_dir}} group=tomcat owner=tomcat state=directory
+  when: st_opendap_1.stat.exists != true
+
+# Move OPEnDAP datadir
+- name: stat OPEnDAP datadir 2
+  stat: path={{default_opendap_dir}}
+  register: st_opendap_2
+
+- name: move OPEnDAP datadir
+  sudo: yes
+  command: mv {{default_opendap_dir}} {{opendap_data_dir}}
+  when: st_opendap_2.stat.exists and st_opendap_2.stat.isdir
+
+- name: symlink OPEnDAP datadir
+  sudo: yes
+  file: src={{opendap_data_dir}} dest={{default_opendap_dir}} state=link
+  when: st_opendap_2.stat.exists and st_opendap_2.stat.islnk == false
+  notify: restart tomcat6
+
+## required one run only..
+#- name: remove tomcat ssl certificates
+#  sudo: yes
+#  file: path=/etc/tomcat6/{{ ansible_fqdn }}.tomcat.keystore state=absent
+
+
+# TODO's:
+# logs to /var/log/thredds/
+# threddsConfig.xml aanpassen met openearth gegevens
+

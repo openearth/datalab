@@ -1,0 +1,3 @@
+# Usage: ansible-playbook provisioning/multisite.yml -e 'app=feature-name'
+- include: datalab_src.yml tags=src
+- include: datalab_multisite.yml tags=components

@@ -1,0 +1,7 @@
+---
+
+- name: install pgstudio
+  sudo: yes
+  yum: name=pgstudio state=present
+  notify: restart tomcat6
+

@@ -1,0 +1,61 @@
+# commonly used python packages
+
+- name: install git
+  sudo: yes
+  yum: name=git state=present
+
+- name: download python 2.7 environment
+  get_url: url=https://contact.x:9a8syaewf@svn.oss.deltares.nl/repos/openearthtools/branches/rpms/{{item}} dest=/tmp/{{item}}
+  sudo: yes
+  with_items:
+    - python27-{{python_version}}.rpm
+    - python27-devel-{{python_version}}.rpm
+    - python27-setuptools-1.1.6-2.noarch.rpm
+
+- name: install python 2.7 environment
+  sudo: yes
+  yum: name={{item}} state=present
+  with_items:
+    - /tmp/python27-{{python_version}}.rpm
+    - /tmp/python27-devel-{{python_version}}.rpm
+    - /tmp/python27-setuptools-1.1.6-2.noarch.rpm
+
+- name: install pip for python 2.7
+  sudo: yes
+  command: /opt/python2.7/bin/easy_install --upgrade pip creates=/opt/python2.7/bin/pip
+
+- name: install virtualenv, setuptools and uwsgi for python 2.7
+  sudo: yes
+  command: /opt/python2.7/bin/pip install {{ item.name }} creates={{ item.creates }}
+  with_items:
+    - {name: 'pip --no-use-wheel', creates: '/opt/python2.7/bin/pip'}
+    - {name: 'virtualenv', creates: '/opt/python2.7/bin/virtualenv'}
+    - {name: 'uwsgi', creates: '/usr/bin/uwsgi'}
+
+- name: install setuptools for python 2.7
+  sudo: yes
+  command: /opt/python2.7/bin/pip install setuptools creates=/opt/python2.7/bin/virtualenv
+
+- name: install psycopg2 for ansible postgresql_db module
+  sudo: yes
+  yum: name=python-psycopg2 state=present
+
+- name: install gcc to compile python requirements
+  sudo: yes
+  yum: name={{ item }} state=present
+  with_items:
+     - gcc
+     - gcc-c++
+
+- name: yum packages for python requirements
+  sudo: yes
+  yum: name={{item}} state=present
+  with_items:
+    - libjpeg-turbo
+    - libjpeg-turbo-devel
+    - libpng
+    - libpng-devel
+    - libtiff
+    - libtiff-devel
+    - zlib
+    - zlib-devel

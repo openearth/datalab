@@ -1,0 +1,38 @@
+# file: inventory_otap
+
+# hosts
+
+[development]
+198.51.100.3
+
+[jenkins]
+172.17.0.*
+
+[test]
+zandmotor-libtest
+
+[accept]
+zandmotor-libaccp
+
+[production]
+zandmotor-libprod
+
+# groups
+
+# all servers
+[all:children]
+development
+test
+accept
+production
+
+# all remote servers
+[remote:children]
+test
+accept
+production
+
+# all remote non-production servers
+[noproduction:children]
+test
+accept

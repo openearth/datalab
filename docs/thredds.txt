@@ -1,0 +1,16 @@
+THREDDS CONFIG NOTES
+====================
+
+Installatie via RPM van Kees den Heijer
+---------------------------------------
+Deze RPM wordt automatisch gedownload en geinstalleerd via ansible.
+
+https://svn.oss.deltares.nl/repos/openearthtools/branches/rpms/thredds-4.3-21.x86_64.rpm
+
+Voor een account voor de openearth repositories moet je je registreren op
+oss.deltares.nl.
+
+
+Datadir
+-------
+  /srv/thredds/content/

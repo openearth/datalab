@@ -1,0 +1,38 @@
+---
+
+- hosts: all
+  connection: ssh
+  sudo: yes
+
+  vars:
+    python_bin: /srv/openearth/venv/bin/python
+    management_py: /srv/openearth/src/manage.py
+
+  tasks:
+    - name: Hax0r migrations
+      sudo_user: openearth
+      command: "{{ python_bin }} {{ management_py }} migrate script_execution_manager zero --fake --delete-ghost-migrations"
+
+    - name: Remove script_execution_manager tables
+      command: psql -d openearth -c "DROP TABLE {{ item }} CASCADE"
+      sudo_user: postgres
+      with_items:
+        - script_execution_manager_group
+        - script_execution_manager_compartment
+        - script_execution_manager_locationpoint
+        - script_execution_manager_measurementmethod
+        - script_execution_manager_observation
+        - script_execution_manager_organ
+        - script_execution_manager_parameter
+        - script_execution_manager_property
+        - script_execution_manager_quality
+        - script_execution_manager_sampledevice
+        - script_execution_manager_samplemethod
+        - script_execution_manager_spatialreferencedevice
+        - script_execution_manager_referencetable
+        - script_execution_manager_unit
+      ignore_errors: true
+
+    - name: Create script_execution_manager tables
+      sudo_user: openearth
+      command: "{{ python_bin }} {{ management_py }} migrate script_execution_manager --delete-ghost-migrations"

@@ -1,0 +1,58 @@
+Provisioning
+============
+
+Passwords
+---------
+
+Voordat er gedeployed kan worden naar een productie of acceptatie server, moet
+er voor elke server een vars file geplaatst worden. Deze files zitten niet in
+SVN. *Password files mogen nooit in SVN!*
+
+Ardi Nonhebel heeft de wachtwoord files. Plaats ze in 'provisioning/vars/'. De
+filenames zullen het volgende pattern hebben *.tudelft.nl.yml.
+
+Lokaal wordt de localhost.localdomain.yml gebruikt.
+
+
+Nuttige commando's
+------------------
+
+Inspecteer vagrant host
+***********************
+ansible vagrant -m setup -i provisioning/hosts.cfg  -vvvv --private-key=/Users/[jouw_username]/.vagrant.d/insecure_private_key -u vagrant
+
+
+Inspecteer accept host
+**********************
+ansible accept -m setup -i provisioning/hosts.cfg  -vvvv --ask-sudo-pass
+
+
+Deploy naar vagrant host
+************************
+Dit kan met vagrant zelf:
+  vagrant provision default
+
+Daarnaast is het mogelijk om dit te doen via ansible zelf. Dit geeft meer
+controle:
+  ansible-playbook -i provisioning/hosts.cfg provisioning/deploy_local.yml  -vvvv --private-key=/Users/[jouw_username]/.vagrant.d/insecure_private_key -u vagrant
+
+
+Deploy naar accept host
+************************
+  ansible-playbook -i provisioning/hosts.cfg provisioning/deploy_accept.yml  -vvvv --ask-sudo-pass
+
+
+Locale variables
+----------------
+Per server zijn andere variabelen nodig. Zet deze in
+provisioning/vars/<hostname>.yml. Deze worden ingeladen bij het provisionen van
+die hostname.
+
+
+Services testen
+---------------
+
+In provisioning zit eeen script `test_services.sh`. Dit script doet een snelle
+basic test of de services nog werken.
+
+  `sh test_services.sh -h openearth-libontw.tudelft.nl -p 443`

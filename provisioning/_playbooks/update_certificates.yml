@@ -1,0 +1,16 @@
+- hosts: all
+  connection: ssh
+  tasks:
+    - name: copy certificates
+      sudo: yes
+      copy: src=files/certificates/{{ansible_fqdn}}.{{item}} dest=/etc/nginx/{{ansible_fqdn}}.{{item}} mode=0600 owner=root group=root
+      with_items:
+        - nginx.pem
+        - nginx.key
+      notify: restart nginx
+
+  handlers:
+    - name: restart nginx
+      sudo: yes
+      service: name=nginx state=restarted
+

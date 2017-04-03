@@ -1,0 +1,72 @@
+---
+
+- name: install subversion
+  sudo: yes
+  yum: name=subversion state=present
+
+- name: install httpd
+  sudo: yes
+  yum: name=httpd state=present
+  notify: restart httpd
+
+- name: configure apache using httpd.conf
+  sudo: yes
+  template: src=httpd.conf dest=/etc/httpd/conf/httpd.conf
+  notify: restart httpd
+
+- name: add httpd to init
+  sudo: yes
+  command: /sbin/chkconfig --add httpd
+
+- name: add httpd to runlevels
+  sudo: yes
+  command: chkconfig httpd on --level 2345
+
+- name: install mod_dav_svn
+  sudo: yes
+  yum: name=mod_dav_svn state=present
+  notify: restart httpd
+
+- name: configure apache subversion module
+  sudo: yes
+  template: src=subversion.conf dest=/etc/httpd/conf.d/subversion.conf
+  notify: restart httpd
+
+- name: configure {{svn_parent_path}} dir
+  sudo: yes
+  file: path={{svn_parent_path}} state=directory mode=4755
+
+#- name: get default repo dir stat
+#  sudo: yes
+#  stat: path=/var/www/svn/openearth/
+#  register: st
+#
+#- name: get new repo dir stat
+#  sudo: yes
+#  stat: path={{svn_parent_path}}/openearth
+#  register: st_new
+
+- name: create openearth svn dir
+  sudo: yes
+  file: path={{svn_parent_path}}/openearth state=directory
+
+- name: create openearth repo
+  sudo: yes
+  command: /usr/bin/svnadmin create {{svn_parent_path}}/openearth chdir={{svn_parent_path}} creates={{svn_parent_path}}/openearth/README.txt
+  notify: restart httpd
+
+- name: set openearth svn permissions
+  sudo: yes
+  file: path={{svn_parent_path}}/openearth owner=apache group=apache recurse=yes state=directory setype=httpd_sys_content_t
+#
+#- name: dump and load old openearth repo
+#  sudo: yes
+#  command: svnadmin dump /var/www/svn/openearth/ | svnadmin load {{svn_parent_path}}/openearth
+#  when: st.stat.exists
+#  notify: restart httpd
+#
+#- name: remove old openearth repo data
+#  sudo: yes
+#  command: rm -rf /var/www/svn/openearth/
+#  when: st.stat.exists
+

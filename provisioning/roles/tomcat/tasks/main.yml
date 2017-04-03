@@ -1,0 +1,24 @@
+---
+
+- name: install tomcat6
+  sudo: yes
+  yum: name=tomcat6 state=present
+  notify: restart tomcat6
+
+- name: set tomcat users
+  sudo: yes
+  template: src=tomcat-users.xml dest=/etc/tomcat6/tomcat-users.xml
+  notify: restart tomcat6
+
+- name: add tomcat6 to init
+  sudo: yes
+  command: /sbin/chkconfig --add tomcat6 creates=/etc/rc3.d/K20tomcat6
+
+- name: add tomcat6 to runlevels
+  sudo: yes
+  command: chkconfig tomcat6 on --level 2345
+
+- name: install tomcat6 config
+  sudo: yes
+  template: src=server.xml dest=/etc/tomcat6/server.xml
+  notify: restart tomcat6

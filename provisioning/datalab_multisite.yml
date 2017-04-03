@@ -1,0 +1,9 @@
+---
+- hosts: all
+
+  roles:
+    - role: nginx
+      tags:
+        multisite
+    - datalab_env
+

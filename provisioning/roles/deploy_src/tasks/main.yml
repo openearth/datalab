@@ -1,0 +1,59 @@
+---
+
+- name: get git root dir
+  local_action: command git rev-parse --show-toplevel
+  register: git_root
+
+- name: creating archive
+  local_action: command chdir="{{git_root['stdout']}}" git archive --format zip --output /tmp/{{ app_module }}_git.zip HEAD
+
+- name: make sure /tmp/app_name doesn't exist yet
+  sudo: yes
+  file: path=/tmp/{{ app_module }} state=absent
+
+- name: create tmp app dir
+  sudo: yes
+  file: path=/tmp/{{ app_module }} state=directory
+
+- name: app user create
+  sudo: yes
+  user: name={{ app_user }} system=yes state=present
+
+- name: app group create
+  sudo: yes
+  group: name={{ app_group }} system=yes state=present
+
+- name: create app dir
+  sudo: yes
+  file: path=/srv/{{ app_module }} owner={{ app_user }} group={{ app_group }} mode=0775 state=directory
+
+- name: unpack app
+  sudo: yes
+  unarchive: dest=/tmp/{{ app_module }}/ src=/tmp/{{ app_module }}_git.zip
+
+- name: remove old app src from /srv/appdir
+  sudo: yes
+  command: rm -rf /srv/{{ app_module }}/src
+
+- name: move new app src to /srv/appdir
+  sudo: yes
+  command: mv -f /tmp/{{ app_module }}/src /srv/{{ app_module }}/
+
+- name: set app_user ownership
+  sudo: yes
+  file: owner={{ app_user }} group={{ app_group }} path=/srv/{{ app_module }}/src recurse=yes state=directory force=yes
+
+- name: notify services to restart
+  command: uptime
+  when: is_docker != true
+  notify:
+    - stop uwsgi
+    - start uwsgi
+    - kill celery
+  #  - run database migrations
+  # Run migrations should be a seperate playbook at the end.
+  # Currently we have a circular dependency with openearth_env.
+  # deploy_src requires db openearth from openearth_env, but openearth_env
+  # requires deploy_src.
+  # Another dependency is: requirements. run migrations requires modules from
+  # requirements, which are not installed here.

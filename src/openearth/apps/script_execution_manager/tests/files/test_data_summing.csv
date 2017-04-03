@@ -1,0 +1,4 @@
+origx,origy,value,orig_srid,date,property,unit,quality,parameter,sampledevice,samplemethod,compartment,measurementmethod
+74235.579,453534.926,1.261,28992,1/08/2013,property 1,unit description 1,quality value 1,parameter_level_1,sample device 1,nen-en-iso 19458:2007-1,compartment description 1,measurement method description 1
+74235.589,453534.926,1.261,28992,1/08/2013,property 2,unit description 2,quality value 2,parameter_level_2,sample device 2,nen-en-iso 19458:2007-2,compartment description 2,measurement method description 2
+74235.599,453534.926,1.261,28992,1/08/2013,property 3,unit description 3,quality value 3,parameter_level_3,sample device 3,nen-en-iso 19458:2007-3,compartment description 3,measurement method description 3

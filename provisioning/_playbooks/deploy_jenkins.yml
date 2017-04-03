@@ -1,0 +1,28 @@
+---
+- hosts: jenkins
+  connection: ssh
+
+  vars:
+    is_docker: true
+
+  roles:
+    - svn_info
+    - system
+    - python
+    - thredds
+    - subversion
+    - ldap
+    - nginx
+    - postgresql
+    - pgstudio
+    - opengeosuite
+    - libvirt
+    - redis
+    - deploy_src
+    - openearth_env
+    #- python_container
+    #- matlab_container
+
+  vars_files:
+    - "vars/localhost.localdomain.yml"
+    - "vars/shared.yml"

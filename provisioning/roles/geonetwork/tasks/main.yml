@@ -1,0 +1,8 @@
+# file: geonetwork/tasks/main.yml
+
+- include: install.yml
+  tags: [geonetwork, geonetwork-install]
+- include: database.yml
+  tags: [geonetwork, geonetwork-database]
+- include: configure.yml
+  tags: [geonetwork, geonetwork-configure]

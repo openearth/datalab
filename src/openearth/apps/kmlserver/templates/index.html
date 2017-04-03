@@ -1,0 +1,18 @@
+<html>
+<body>
+<h1>Directory index of &quot;{{ fancy_path }}&quot;</h1>
+<ul id="directories">
+    {% if path %}
+        <li class="directory"><a href="{{ prev_dir }}">..</a></li>
+    {% endif %}
+    {% for dir in directories %}
+    <li class="directory"><a href="{{ dir_prefix }}{{ dir }}">{{ dir }}</a></li>
+    {% endfor %}
+</ul>
+<ul id="files">
+    {% for file in files %}
+    <li class="file"><a href="{{ dir_prefix }}{{ file }}">{{ file }}</a> <!--[<a href="{% url "kmlviewer" path=file %}">View</a>]--></li>
+    {% endfor %}
+</ul>
+</body>
+</html>

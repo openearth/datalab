@@ -1,0 +1,21 @@
+{% load cms_tags %}
+<div id="footer">
+	<div class="navbar navbar-default navbar-fixed-bottom">
+        {% placeholder 'footer' or %}
+		<div style="float:right">
+			<p class="navbar-text">
+			&copy; 2013-{% now 'Y' %}: 3TU Datacentrum
+			</p>
+		</div>
+		<p class="navbar-text">
+			A collaboration of:
+			<a href="http://datacentrum.3tu.nl"><img src="{{STATIC_URL}}img/3tulogo.jpg"></a>
+			<a href="http://www.ecoshape.nl/"><img src="{{STATIC_URL}}img/ecoshape.jpg"></a>
+			<a href="http://www.deltares.nl/"><img src="{{STATIC_URL}}img/deltares.jpg"></a>
+			<a href="http://www.openearth.nl/"><img src="{{STATIC_URL}}img/openearth.jpg"></a>
+			<a href="http://www.kansenvoorwest.nl"><img src="{{STATIC_URL}}img/eu-zw.jpg"></a>
+			<a href="http://www.kansenvoorwest.nl"><img src="{{STATIC_URL}}img/logo-zw-w-jpg.jpg"></a>
+		</p>
+        {% endplaceholder %}
+	</div>
+</div>

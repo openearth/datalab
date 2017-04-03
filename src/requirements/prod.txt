@@ -1,0 +1,3 @@
+# Install all of our production dependencies only.
+-r common.txt
+-r linux.txt

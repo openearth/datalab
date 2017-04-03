@@ -1,0 +1,58 @@
+---
+# This playbook adds demo data and a demo script to svn for testing conveiniance
+#
+# ansible-playbook -i provisioning/inventory_otap \
+#   provisioning/_playbooks/svn_demo_data.yml --limit=development
+
+- hosts: all
+  connection: ssh
+  vars:
+    local_trunk: /data/openearth_trunk
+
+  tasks:
+    - name: Check out svn to /tmp/openearth_trunk
+      sudo: yes
+      command: svn checkout {{ environment_svn_url }} {{ local_trunk }}
+        --username=oe_admin --password={{ oe_admin_pass }}
+        --trust-server-cert --non-interactive
+
+    - name: create demo_dataset directories
+      sudo: yes
+      file: path={{ local_trunk }}/demo_dataset/{{item}} state=directory
+      with_items:
+        - raw
+        - scripts
+
+    - name: unzip demo_dataset to {{ local_trunk }}/demo_dataset/raw
+      sudo: yes
+      unarchive: src=files/demo_dataset/raw/plaice_large_1989.zip
+        dest={{ local_trunk }}/demo_dataset/raw
+
+    - name: copy files to {{ local_trunk }}/demo_dataset/raw
+      sudo: yes
+      copy: src=files/demo_dataset/raw/{{ item }}
+        dest={{ local_trunk }}/demo_dataset/raw
+      with_items:
+        - xyztext.csv
+        - KML_Samples.kml
+
+    - name: copy demo scripts to /demo_dataset/scripts
+      sudo: yes
+      copy: src=files/demo_dataset/scripts/{{item}}
+        dest={{ local_trunk }}/demo_dataset/scripts
+      with_items:
+        - plaice2nc.py
+        - create_results.py
+        - test.m
+        - copy_csv.py
+        - copy_kml.py
+
+    - name: add demo_dataset to svn
+      sudo: yes
+      command: svn add --force {{ local_trunk }}/demo_dataset
+
+    - name: commit demo_dataset
+      sudo: yes
+      command: svn commit -m "added demo dataset" {{ local_trunk }}
+        --username=oe_admin --password={{ oe_admin_pass }}
+        --trust-server-cert --non-interactive

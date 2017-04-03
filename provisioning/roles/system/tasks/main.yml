@@ -1,0 +1,77 @@
+- name: echo is_docker
+  command: echo {{ is_docker }}
+
+- name: echo tomcat_management_pass
+  command: echo {{ tomcat_management_pass }}
+
+- include: extra_storage.yml tags=storage
+  when: ansible_virtualization_type == "virtualbox"
+
+- name: Ensure ntpd is at the latest version
+  sudo: yes
+  yum: pkg=ntp state=present
+  notify: restart ntpd
+
+- name: echo ansible_virtualization_type
+  command: echo {{ ansible_virtualization_type }}
+
+- name: Set timezone to Amsterdam
+  sudo: yes
+  file: src=/usr/share/zoneinfo/Europe/Amsterdam dest=/etc/localtime state=link force=yes
+
+- name: Add deltares repo
+  sudo: yes
+  copy: src=deltares.repo dest=/etc/yum.repos.d/deltares.repo
+
+- name: Add deltares repo mirrorlist
+  sudo: yes
+  copy: src=deltares_mirrors dest=/etc/yum.repos.d/deltares_mirrors
+
+- name: Add openearth-datalab repo
+  sudo: yes
+  copy: src=openearth-datalab.repo dest=/etc/yum.repos.d/openearth-datalab.repo
+
+- name: copy yum epel repo key
+  sudo: yes
+  copy: src=epel_signing.key dest=/etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+  register: epel_repo_key
+
+- name: import epel repo key
+  sudo: yes
+  command: /bin/rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+  when: epel_repo_key['changed']
+
+- name: yum add epel repo
+  sudo: yes
+  yum: name=http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm state=installed
+
+- name: copy iptables rules
+  sudo: yes
+  copy: src=firewall.sh dest=/root/firewall.sh
+  register: iptable_rules
+
+- name: apply iptables rules
+  sudo: yes
+  command: /bin/bash /root/firewall.sh
+  when: iptable_rules['changed'] and is_docker == false
+
+- name: save iptables state
+  sudo: yes
+  command: service iptables save
+  when: iptable_rules['changed'] and is_docker == false
+
+- name: install python-setuptools
+  sudo: yes
+  yum: name=python-setuptools state=present
+
+- name: install pip
+  sudo: yes
+  easy_install: name=pip
+
+- name: install passlib
+  sudo: yes
+  pip: name=passlib
+
+- name: uninstall passlib
+  sudo: yes
+  pip: name=passlib state=absent

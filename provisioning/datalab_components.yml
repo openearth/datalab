@@ -1,0 +1,23 @@
+---
+- hosts: all
+
+  roles:
+    - system
+    - python
+    - tomcat
+    - thredds
+    - role: geonetwork
+      tags:
+        geonetwork
+    - subversion
+    - ldap
+    - role: nginx
+      tags:
+        nginx
+    - postgresql
+    - pgstudio
+    - libvirt
+    - opengeosuite
+    - datalab_env
+    - redis
+

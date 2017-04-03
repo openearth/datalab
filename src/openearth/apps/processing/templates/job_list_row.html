@@ -1,0 +1,78 @@
+{% load i18n %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                {% trans 'Jobs' %}
+                <span class="pull-right">
+                    {% if environment.id %}
+                    <a href="{% url 'job_create' environment.id %}" class="btn btn-primary btn-xs" role="button">
+                        <i class="fa fa-plus"></i> {% trans 'New job' %}
+                    </a>
+                    {% endif %}
+                </span>
+            </div>
+            <!-- /.panel-heading -->
+            <div class="panel-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>{% trans 'Planned start' %}</th>
+                                <th>{% trans 'Auto commit' %}</th>
+                                <th>{% trans 'Script' %}</th>
+                                <th>{% trans 'Status' %}</th>
+                                <th>{% trans 'Created date' %}</th>
+                                <th>{% trans 'Uuid' %}</th>
+                                <!-- <th>&nbsp;</th> -->
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in object_list %}
+                                <tr onclick="javascript:window.location.href='{% url 'job_detail' env=job.environment.id uuid=job.uuid %}';" style="cursor:pointer;">
+                                    <td>{{ job.start|date:"d-m-Y H:i:s" }}</td>
+                                    <td>{{ job.auto_commit|yesno }}</td>
+                                    <td>{{ job.script }}</td>
+                                    <td>{{ job.get_status_display }}</td>
+                                    <td>{{ job.created_date|date:"d-m-Y H:i:s" }}</td>
+                                    <td>{{ job.uuid }}</td>
+                                    <!-- <td>
+                                        {% if job.status < 100 %}
+                                        <a href="{% url 'job_detail' env=job.environment.id uuid=job.uuid %}" title="{% trans "View" %}"><i class="fa fa-tasks fa-fw"></i></a>
+                                        <a href="{% url 'job_update' env=job.environment.id uuid=job.uuid %}" title="{% trans "Edit" %}"><i class="fa fa-pencil-square-o fa-fw"></i></a>
+                                        {% else %}
+                                            <a href="{% url 'job_detail' env=job.environment.id uuid=job.uuid %}" title="{% trans "View" %}"><i class="fa fa-tasks fa-fw"></i></a>
+                                        {% endif %}
+                                    </td> -->
+                                 </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6">{% trans 'No jobs defined' %}</td>
+                                </tr>
+                            {% endfor %}
+
+                             <div class="pagination">
+                                <span class="page-links">
+                                    {% if page_obj.has_previous %}
+                                        <a href="{%  url 'environment_detail' environment.id %}?page={{ page_obj.previous_page_number }}">previous</a>
+                                    {% endif %}
+                                    <span class="page-current">
+                                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                    </span>
+                                    {% if page_obj.has_next %}
+                                        <a href="{%  url 'environment_detail' environment.id  %}?page={{ page_obj.next_page_number }}">next</a>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- /.table-responsive -->
+            </div>
+            <!-- /.panel-body -->
+        </div>
+        <!-- /.panel -->
+    </div>
+
+</div>
+<!-- /.row -->

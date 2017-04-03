@@ -1,0 +1,17 @@
+# file: geonetwork/meta/main.yml
+
+galaxy_info:
+  author: j van de Haterd
+  company: tudelft
+  description: "Install and configure Geonetwork3."
+  min_ansible_version: 1.6
+  license: MIT
+  platforms:
+  - name: Centos
+    versions:
+    - 6.5
+  categories:
+  - web
+  - web:geo
+
+dependencies: []

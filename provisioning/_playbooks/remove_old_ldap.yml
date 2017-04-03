@@ -1,0 +1,23 @@
+---
+
+# Remove ldap server from openearth* servers
+# ansible-playbook -i provisioning/hosts.cfg provisioning/remove_old_ldap.yml --limit=vagrant* -vvvv -u vagrant --private-key=~/.vagrant.d/insecure_private_key
+
+- hosts: all
+  connection: ssh
+
+  tasks:
+    - name: remove old ldap
+      sudo: yes
+      yum: name=$item state=absent
+      with_items:
+        - openldap-servers
+        - openldap-clients
+
+    - name: remove slapd config clutter
+      sudo: yes
+      file: path={{ item }} state=absent
+      with_items:
+        - /etc/openldap
+        - /etc/sysconfig/ldap
+        - /var/lib/ldap

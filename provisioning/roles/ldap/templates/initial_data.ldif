@@ -1,0 +1,49 @@
+# extended LDIF
+#
+
+# group, {{ldap_dc_first}}.{{ldap_dc_second}}
+dn: ou=group,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: organizationalUnit
+ou: group
+
+# machines, {{ldap_dc_first}}.{{ldap_dc_second}}
+dn: ou=machines,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: organizationalUnit
+ou: machines
+
+# Users, group, {{ldap_dc_first}}.{{ldap_dc_second}}
+dn: cn=Users,ou=group,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: posixGroup
+gidNumber: 10000
+cn: Users
+
+# oe_admin, people, {{ldap_dc_first}}.{{ldap_dc_second}}
+dn: cn=oe_admin,ou=people,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+homeDirectory: /home/oe_admin
+loginShell: /bin/bash
+uid: oe_admin
+cn: oe_admin
+uidNumber: 10000
+gidNumber: 10000
+sn: oe_admin
+givenName: oe_admin
+mail: oe_admin@domain.nl
+userPassword: {{oe_admin_pass}}
+
+# restrictedDatasetUser, group, {{ldap_dc_first}}.{{ldap_dc_second}}
+dn: cn=restrictedDatasetUser,ou=group,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: posixGroup
+gidNumber: 10001
+cn: restrictedDatasetUser
+memberUid: oe_admin
+
+# svnUser, group, {{ldap_dc_first}}.{{ldap_dc_second}}
+dn: cn=svnUser,ou=group,dc={{ldap_dc_first}},dc={{ldap_dc_second}}
+objectClass: posixGroup
+cn: svnUser
+gidNumber: 10002
+memberUid: oe_admin

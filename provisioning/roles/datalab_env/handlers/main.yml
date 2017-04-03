@@ -1,0 +1,15 @@
+---
+- name: stop uwsgi
+  sudo: yes
+  ignore_errors: True
+  command: initctl stop uwsgi
+
+- name: start uwsgi
+  sudo: yes
+  command: initctl start uwsgi
+
+# Celery will restarted by uwsgi emperor, after killing it.
+- name: kill celery
+  sudo: yes
+  shell: ps -u uwsgi | grep celery | awk '{print $1}' | xargs kill
+  ignore_errors: yes

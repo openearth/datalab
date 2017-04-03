@@ -1,0 +1,5 @@
+---
+
+- name: restart ntpd
+  sudo: yes
+  service: name=ntpd state=restarted

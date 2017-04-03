@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load i18n static%}
+
+{% block title %}
+    {% trans "Jobs" %}
+{% endblock %}
+
+{% block extra-bottom-slot %}
+    <script src="{% static "js/processing.js" %}"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-lg-8">
+            <h1 class="page-header">{% blocktrans %}Jobs for {{ environment }}{% endblocktrans %}</h1>
+        </div>
+    </div>
+    {% include "job_list_row.html" with environment=environment object_list=object_list %}
+{% endblock %}

@@ -1,0 +1,11 @@
+---
+# libvirt 0.10 required selinux to have a state other then disabled. So it was
+# set to permissive. With libvirt 1.2.x this bug is fixed. Use this to disable
+# selinux.
+- hosts: vagrant
+  connection: ssh
+
+  tasks:
+    - name: set selinux state to disabled
+      selinux: policy=targeted state=disabled
+

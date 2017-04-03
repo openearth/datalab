@@ -1,0 +1,15 @@
+---
+- hosts: all
+
+  vars:
+    remove_matlab_container: N
+
+  pre_tasks:
+    - name: remove old matlab container
+      sudo: yes
+      file: path={{container_dir}}/{{matlab_container_name}} state=absent
+      ignore_errors: yes
+      when: remove_matlab_container == 'Y' or remove_matlab_container == 'y'
+
+  roles:
+    - {role: matlab_container, tags: ["matlab_container"]}

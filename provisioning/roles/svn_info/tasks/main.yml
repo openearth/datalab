@@ -1,0 +1,18 @@
+---
+
+- name: copy svn info to tmp
+  sudo: yes
+  copy: src=svn_info dest=/tmp/svn_info
+
+- name: create provisioning log dir
+  sudo: yes
+  action: file dest=/var/log/provisioning state=directory owner=root
+
+- name: log provisioning started
+  sudo: yes
+  shell: 'echo *** provisioning started at $(date) >> /var/log/provisioning/provisioning.log'
+  notify: log provisioning done
+
+- name: log svn info in log
+  sudo: yes
+  shell: 'cat /tmp/svn_info >> /var/log/provisioning/provisioning.log'

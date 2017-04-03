@@ -1,0 +1,16 @@
+# Adds cron to restart PostgreSQL and NginX 2 minutes after reboot.
+#
+# On openearth-libprod occures a problem where network mounts are not ready when
+# PostgreSQL starts. PostgreSQL has the database stored on that mount.
+# NginX stores upload caching on /data.
+
+- hosts: all
+  connection: ssh
+  tasks:
+    - name: copy crontab files for nginx and postgres
+      sudo: yes
+      copy: src=files/cron.d/{{item}} dest=/etc/cron.d/{{item}} mode=0600
+            owner=root group=root
+      with_items:
+        - nginx_restart
+        - postgresql_restart

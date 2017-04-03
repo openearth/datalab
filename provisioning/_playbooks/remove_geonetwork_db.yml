@@ -1,0 +1,15 @@
+---
+
+- hosts: all
+  connection: ssh
+
+  tasks:
+    - name: stop tomcat to make moving of lock files of h2 db possible
+      sudo: yes
+      command: /etc/init.d/tomcat6 stop
+      #  when: st_thredds.stat.exists and st_thredds.stat.isdir
+      ignore_errors: yes
+
+    - name: remove existing /data/db geonetwork db
+      sudo: yes
+      file: path={{ geonetwork_data_dir }}/db state=absent

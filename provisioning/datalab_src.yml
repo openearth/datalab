@@ -1,0 +1,8 @@
+---
+
+- hosts: all:!development
+  # Hosts which have the source mounted in /srv, like vagrant boxes, do not
+  # need the deploy_src role. This role makes a package of the source code from
+  # git and puts it in /srv. So this is only for remote and jenkins.
+  roles:
+   - deploy_src

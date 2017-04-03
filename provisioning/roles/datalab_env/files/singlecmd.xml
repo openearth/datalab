@@ -1,0 +1,26 @@
+<domain type='lxc'>
+  <name>singlecmd</name>
+  <uuid>e0df2c01-404f-1844-8dfa-afd4ae2b8b87</uuid>
+  <memory>131072</memory>
+  <currentMemory>131072</currentMemory>
+  <vcpu>1</vcpu>
+  <os>
+    <type arch='x86_64'>exe</type>
+    <init>/bin/bash</init>
+  </os>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>restart</on_crash>
+  <devices>
+    <emulator>/usr/libexec/libvirt_lxc</emulator>
+    <filesystem>
+      <source dir='/srv/openearth/containers/centos-6-x86_64'/>
+      <target dir='/'/>
+    </filesystem>
+<!--    <interface type='network'>
+      <source network='default'/>
+      <mac address='00:16:3e:cf:a8:28'/>
+    </interface>-->
+    <console type='pty'/>
+  </devices>
+</domain>

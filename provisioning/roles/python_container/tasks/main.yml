@@ -1,0 +1,311 @@
+# This playbook creates a container image, with python 2.7 support.
+# Add user: worker, copies the host ssh key to it.
+# Also sets a password for the root user. Useful for debugging instances.
+# This playbook should be called from openearth_pyhton_container.yml.
+---
+- name: remove old python container
+  sudo: yes
+  file: path={{container_dir}}/{{python_container_name}} state=absent
+  ignore_errors: yes
+  when: remove_python_container == 'Y' or remove_python_container == 'y'
+
+- name: create container directories
+  sudo: yes
+  file: path={{container_dir}} owner={{app_user}} mode=0775 state=directory
+
+- name: symlink container dir to app dir
+  sudo: yes
+  file: dest=/srv/{{app_user}}/containers src={{container_dir}} owner={{app_user}} state=link
+
+# We have to create an image file. This is because the image is copied as a
+# non-root user by the processing task. Copying a directory with a minimal
+# centos install as a normal user is not possible; everything is installed
+# as root. If a inimal install is not created as root, ownership on all files
+# will end up as non-root. Which is not a good idea (/etc/passwd for example).
+- name: create image
+  sudo: yes
+  command: dd if=/dev/zero of={{container_dir}}/{{python_container_name}} bs=1 count=0 seek={{container_size}}
+      creates={{container_dir}}/{{python_container_name}}
+  register: image
+
+- name: add filesystem to image
+  sudo: yes
+  shell: yes | /sbin/mkfs.ext4 -O ^has_journal -q {{container_dir}}/{{python_container_name}}
+  when: image.changed
+
+- name: find unused loop device
+  sudo: yes
+  command: losetup -f
+  register: loopdev
+
+- name: make sure /mnt is not mounted by something else
+  sudo: yes
+  command: umount /mnt
+  ignore_errors: yes
+
+- name: mount image in /mnt
+  sudo: yes
+  command: mount -o loop={{loopdev.stdout}} {{container_dir}}/{{python_container_name}} /mnt
+
+- name: create container base directories
+  sudo: yes
+  command: mkdir /mnt/{{item}} -p
+  with_items:
+    - "/etc/yum.repos.d/"
+
+- name: copy yum repo files from host to base container
+  sudo: yes
+  shell: /bin/cat /etc/yum.repos.d/{{item}} | /bin/sed s/'$releasever'/6/g > /mnt/etc/yum.repos.d/{{item}}
+  with_items:
+    - deltares.repo
+    - elgis.repo
+    - CentOS-Base.repo
+    - pgdg-93-{{ansible_distribution|lower}}.repo
+
+# Install centos core into the image.
+- name: install minimal centos core
+  sudo: yes
+  command: yum groupinstall {{item}} -y --installroot=/mnt --nogpgcheck
+  with_items:
+    - core
+    - plymouth
+    - libselinux-python
+
+- name: create random and urandom to make svn/ssl/ssh work
+  sudo: yes
+  command: mknod -m {{item.mode}} /mnt/dev/{{item.device}} c {{item.name}} {{item.type}} creates=/mnt/dev/{{item.device}}
+  with_items:
+    - {device: "urandom", name: "1", type: "9", mode: "0444"}
+    - {device: "random", name: "1", type: "8", mode: "0666"}
+
+- name: set root password in container
+  sudo: yes
+  command: chroot /mnt sh -c "echo 'root:{{container_root_pass}}' | chpasswd"
+
+- name: create worker user in container
+  sudo: yes
+  command: chroot /mnt adduser worker creates=/mnt/home/worker
+
+- name: fix base container tty
+  sudo: yes
+  copy: src=container/securetty dest=/mnt/etc/ mode=655 owner=root group=root
+
+- name: fix login pam rules in container
+  sudo: yes
+  copy: src=container/{{item.local}} dest=/mnt/etc/pam.d/{{item.remote}} mode=600 owner=root group=root
+  with_items:
+    - {local: pam_sshd, remote: sshd}
+    - {local: pam_login, remote: login}
+
+- name: add networking support to container
+  sudo: yes
+  template: src=container/network  dest=/mnt/etc/sysconfig/network mode=644 owner=root group=root
+
+- name: configure network devices in container
+  sudo: yes
+  copy: src=container/{{ item }} dest=/mnt/etc/sysconfig/network-scripts/{{ item }} mode=644 owner=root group=root
+  with_items:
+    - "ifcfg-eth0"
+
+- name: configure fstab in container
+  sudo: yes
+  copy: src=container/fstab dest=/mnt/etc/fstab mode=644 owner=root group=root
+
+- name: configure mtab in container
+  sudo: yes
+  file: dest=/mnt/etc/mtab mode=644 owner=root group=root state=touch
+
+# Ssh stuff
+- name: create worker user .ssh dir in container
+  sudo: yes
+  file: path=/mnt/home/worker/.ssh mode=0700 state=directory
+
+- name: add ssh key to authorized_keys for "worker" in container
+  sudo: yes
+  command: "cp /home/{{uwsgi_user}}/.ssh/{{worker_ssh_key_name}}.pub /mnt/home/worker/.ssh/authorized_keys"
+
+- name: chown .ssh dir to worker:worker in container
+  sudo: yes
+#  file: path=/mnt/home/worker/.ssh mode=0700 state=directory
+  command: chroot /mnt sh -c "chown -R worker:worker /home/worker/.ssh"
+
+- name: set file permissions for .ssh and files in worker
+  sudo: yes
+  file: path=/mnt/home/worker/.ssh mode=0700 state=directory
+
+- name: set file permissions for .ssh and files in worker
+  sudo: yes
+  file: path=/mnt/home/worker/.ssh/authorized_keys mode=0600 state=file
+
+- name: create results dir in container
+  sudo: yes
+  command: /usr/sbin/chroot  --userspec=worker:worker /mnt sh -c "mkdir /home/worker/results" creates=/mnt/home/worker/results
+
+# Does weird stuff (also fixes device error stuff..)
+#- name: configure ttys in container
+#  sudo: yes
+#  copy: src=container/lxc-sysinit.conf dest=/mnt/etc/init/lxc-sysinit.conf mode=644 owner=root group=root
+
+
+#- name: copy resolv.conf to container
+#  sudo: yes
+#  copy: src=container/resolv.conf dest=/mnt/etc/resolv.conf mode=644 owner=root group=root
+
+- name: copy host resolv.conf to container
+  sudo: yes
+  command: cp /etc/resolv.conf /mnt/etc/resolv.conf
+
+- name: create cgroup directory for container
+  sudo: yes
+  file: path=/mnt/cgroup owner=root group=root mode=0755 state=directory
+
+- name: yum add epel repo into container
+  sudo: yes
+  command: yum install http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm -y --installroot=/mnt/ --nogpgcheck
+           creates=/mnt/etc/yum.repos.d/epel.repo
+
+- name: yum add elgis repo into container
+  sudo: yes
+  command: yum install http://elgis.argeo.org/repos/6/elgis-release-6-6_0.noarch.rpm -y --installroot=/mnt/ --nogpgcheck
+           creates=/mnt/etc/yum.repos.d/elgis.repo
+
+- name: install system requirements into base container
+  sudo: yes
+  command: yum install {{item}} -y --installroot=/mnt/ --nogpgcheck
+  with_items:
+    - plymouth
+    - libselinux-python
+    - subversion
+    - gcc
+    - cairo-devel
+    - netcdf-devel
+
+- name: download netcdf sources
+  sudo: yes
+  get_url: url=ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-{{ netcdf_version }}.tar.gz dest=/tmp/netcdf-{{ netcdf_version }}.tar.gz
+
+- name: untar netcdf
+  sudo: yes
+  unarchive: src=/tmp/netcdf-{{ netcdf_version }}.tar.gz dest=/mnt/usr/src copy=no
+
+- name: configure netcdf
+  sudo: yes
+  command: chroot /mnt sh -c "cd /usr/src/netcdf-{{ netcdf_version }} && ./configure --prefix=/usr/local --enable-fsync --enable-jna --enable-netcdf4 --enable-dynamic-loading"
+
+- name: build and install netcdf
+  command: chroot /mnt sh -c "cd /usr/src/netcdf-{{ netcdf_version }} &&  make {{ item }}"
+  sudo: yes
+  with_items:
+   - all
+   - install
+
+- name: install requirements for python scripts into container
+  sudo: yes
+  command: yum install {{item}} -y --installroot=/mnt/ --nogpgcheck
+  with_items:
+    - git
+    #- netcdf-devel
+    - hdf5-devel
+    - python27
+    - python27-devel
+    - python27-setuptools
+    - python27-virtualenv
+    - python27-dateutil
+    - python27-matplotlib
+    - python27-meld3
+    - python27-netcdf4
+    - python27-nose
+    - python27-numpy
+    - python27-pandas
+    - python27-pyparsing
+    - python27-pytz
+    - python27-six
+    - libpqxx-devel
+    - netCDFKickstarter
+    - gdal
+    - gdal-libs
+    - gdal-devel
+    - gdal-python
+    - blas
+    - blas-devel
+    - gcc-c++
+    - libjpeg-turbo
+    - libjpeg-turbo-devel
+    - libpng
+    - libpng-devel
+    - libtiff
+    - libtiff-devel
+    - libxml2-devel
+    - libxslt
+    - libxslt-devel
+    - libgfortran
+    - lapack
+    - lapack-devel
+    - spatialindex
+    - spatialindex-devel
+    - vtk
+    - vtk-devel
+    - vtk-python
+    - zlib
+    - zlib-devel
+    #- R
+    #- python27-supervisor-3.0-11.noarch.rpm
+    #- python27-tornado-3.1.1-2.noarch.rpm
+
+- name: install easy_install in container
+  sudo: yes
+  command: /usr/sbin/chroot /mnt sh -c "/opt/python2.7/bin/easy_install pip"
+
+# Yes we instaleld this first with yum. But that version of netcdf is broken.
+# It's required for the headers though.
+- name: install netcdf in python environment.
+  sudo: yes
+  command: /usr/sbin/chroot /mnt sh -c "/opt/python2.7/bin/pip install {{item}} --upgrade "
+  with_items:
+    - cython
+    - netcdf4
+
+- name: copy pip requirements in container
+  sudo: yes
+  copy: src=container/requirements.txt dest=/mnt/tmp/requirements.txt mode=644 owner=root group=root
+
+- name: pip install requirements in container
+  sudo: yes
+  command: /usr/sbin/chroot /mnt env
+      CPLUS_INCLUDE_PATH=/usr/include:/usr/include/gdal
+      C_INCLUDE_PATH=/usr/include:/usr/include/gdal
+      CPP_INCLUDE_PATH=/usr/include:/usr/include/gdal
+      sh -c "PATH=$PATH:/usr/pgsql-9.3/bin/ /opt/python2.7/bin/pip install -r /tmp/requirements.txt"
+
+
+
+# Add oetools to container
+- name: checkout open earth tools for matlab
+  sudo: yes
+  command: /usr/sbin/chroot /mnt sh -c "svn co
+    https://svn.oss.deltares.nl/repos/openearthtools/trunk/{{ item }}/ /home/worker/oetools/{{ item }}/
+    --non-interactive --trust-server-cert --username={{deltares_svn_user}}
+    --password={{deltares_svn_pass}}"
+  with_items:
+    - matlab
+    - python
+
+- name: fix ownership for matlab tools
+  sudo: yes
+  command: /usr/sbin/chroot /mnt sh -c "chown -R worker:worker /home/worker/oetools/"
+
+# Clean up chroot environment
+- name: remove random and urandom
+  sudo: yes
+  file: path=/mnt/dev/{{item}} state=absent
+  with_items:
+    - urandom
+    - random
+
+- name: umount image at /mnt
+  sudo: yes
+  mount: name=/mnt src={{container_dir}}/{{python_container_name}} fstype=ext3 state=unmounted
+
+- name: set app user permission on container
+  sudo: yes
+  file: path={{container_dir}}/{{python_container_name}} group={{app_user}} owner={{app_user}} state=file

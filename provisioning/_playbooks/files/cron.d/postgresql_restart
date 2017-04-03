@@ -1,0 +1,2 @@
+# Restart postgresql 2 minutes after reboot to fix NFS mounting issues.
+@reboot root sleep 120 && /sbin/service postgresql-9.3 restart

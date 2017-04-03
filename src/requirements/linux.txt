@@ -1,0 +1,3 @@
+# Dependencies that only work on Linux
+libvirt-python==1.2.1
+netCDF4==1.0.8

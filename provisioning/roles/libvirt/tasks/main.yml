@@ -1,0 +1,103 @@
+# Useful virsh commands:
+# Generate XML File
+# virt-install --connect lxc:/// --name test --ram 512 --vcpu 1 --filesystem /var/lib/libvirt/lxc/centos-6-x86_64/,/ --noautoconsole  --print-xml > test.xml
+# Create network device
+# sudo virsh -c lxc:/// net-define default.xml
+# sudo virsh -c lxc:/// net-start default
+# Create instance "test"
+# sudo virsh -c lxc:/// define test.xml
+# Start instance "test"
+# sudo virsh -c lxc:/// start test
+# Stop instance "test"
+# sudo virsh -c lxc:/// destroy test
+# remove container "test" from virtd (not from fs!)
+# sudo virsh -c lxc:/// undefine test
+# sudo virsh -c lxc:/// list
+# Check tty of "test"
+# sudo virsh -c lxc:/// console test
+#
+# Tutorials
+# https://www.berrange.com/posts/2011/09/27/getting-started-with-lxc-using-libvirt/
+# http://wiki.centos.org/HowTos/LXC-on-CentOS6
+# Dit is het commando om een container te starten
+# sudo virsh net-start default
+# sudo virsh -c lxc:/// start helloworld
+# /end command
+# - TODO: test met "touch bla" of bla in de huidige base image terecht komt.
+# sudo virsh -c lxc:/// list
+# sudo virsh -c lxc://  console helloworld
+
+
+---
+
+- name: install lxc
+  sudo: yes
+  yum: pkg=lxc state=present
+
+- name: install sanlock
+  sudo: yes
+  yum: pkg=sanlock state=present
+
+- name: install libvirt stack
+  sudo: yes
+  yum: name={{ item }}-1.2.* state=installed
+  with_items:
+    - libvirt
+    - libvirt-client
+    - libvirt-daemon
+    - libvirt-daemon-config-network
+    - libvirt-daemon-config-nwfilter
+    - libvirt-daemon-driver-interface
+    - libvirt-daemon-driver-lxc
+    - libvirt-daemon-driver-network
+    - libvirt-daemon-driver-nodedev
+    - libvirt-daemon-driver-nwfilter
+    - libvirt-daemon-driver-qemu
+    - libvirt-daemon-driver-secret
+    - libvirt-daemon-driver-storage
+    - libvirt-daemon-kvm
+    - libvirt-daemon-lxc
+    - libvirt-debuginfo
+    - libvirt-devel
+    - libvirt-docs
+    - libvirt-lock-sanlock
+    - libvirt-login-shell
+
+- name: copy libvirtd.conf
+  sudo: yes
+  copy: src=libvirtd.conf dest=/etc/libvirt/libvirtd.conf
+
+- name: add libvirt group
+  sudo: yes
+  group: name=libvirt state=present
+
+- name: add app_user to libvirt
+  sudo: yes
+  user: name={{ app_user }} append=yes groups=libvirt
+
+# The next commands make docker containers crash.
+- name: libvirtd starts at boot
+  sudo: yes
+  command: chkconfig libvirtd on
+  when: is_docker == false
+
+- name: make sure libvirtd is started
+  sudo: yes
+  service: name=libvirtd state=started
+  when: is_docker == false
+
+- name: cg* services start at boot
+  sudo: yes
+  command: chkconfig {{item}} on
+  with_items:
+    - cgconfig
+    - cgred
+  when: is_docker == false
+
+- name: make sure cg* services are started
+  sudo: yes
+  service: name={{item}} state=started
+  with_items:
+    - cgconfig
+    - cgred
+  when: is_docker == false

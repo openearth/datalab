@@ -1,0 +1,7 @@
+Certificates
+=============
+Plaatsen in 'provisioning/files/certificates'. Alle files met het pattern
+*.tudelft.nl.*.keystore worden door svn ge-ignored. Zo wordt
+localhost.localdomain.tomcat.keystore wel toegestaan.
+
+Het is de bedoeling dat CA certificates niet in SVN terecht komen.

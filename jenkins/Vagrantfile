@@ -1,0 +1,29 @@
+Vagrant.configure("2") do |config|
+  #config.vm.network :private_network, ip: "198.51.100.3"
+  config.vm.provider "docker" do |d, override|
+    d.image = "smerrill/vagrant-centos"
+    d.has_ssh = true
+    d.env = {"HOSTNAME"=> "localhost.localdomain"}
+    # To make cgroups work in docker, make sure docker daemon is run with the
+    # lxc driver docker -d  '--exec-driver=lxc' (...)
+    # Then docker run has to be called with --privileged
+    # d.create_args = ['--privileged',]
+    # Unfortunately: cgroups make the host OS crash. Disabled for now.
+    # This is needed if you have non-Docker provisioners in the Vagrantfile.
+    override.vm.box = nil
+
+    # Override random hostname
+    override.vm.hostname = "localhost.localdomain"
+
+    override.vm.provision :ansible do |ansible|
+      ansible.playbook = "../provisioning/site.yml"
+      ansible.inventory_path = "./get_host.py"
+      ansible.limit = "jenkins"
+      ansible.verbose = "vvvv"
+      ansible.skip_tags = "python_container,matlab_container"
+      ansible.extra_vars = {
+        is_docker: true
+      }
+    end
+  end
+end

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}
+    {% trans "Update" %}
+{% endblock %}
+
+{% block content %}
+    {% include "job_base.html" with title=_('Edit job') %}
+{% endblock %}

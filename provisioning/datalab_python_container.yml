@@ -1,0 +1,20 @@
+---
+# Example call:
+# ansible-playbook -i provisioning/inventory_otap provisioning/openearth_python_container.yml -vvvv --limit=test --extra-vars="python_container_name=python27_20141110" --limit=test
+# ansible-playbook -i provisioning/inventory_otap provisioning/openearth_python_container.yml -vvvv --limit=development --extra-vars="python_container_name=python27_20141110" --private-key=~/.vagrant/insecure_privatekey
+- hosts: all
+
+  vars:
+    remove_python_container: N
+    netcdf_version: 4.3.3
+    python_container_name: python27_2014-11-10
+
+  pre_tasks:
+    - name: remove old python container
+      sudo: yes
+      file: path={{container_dir}}/{{python_container_name}} state=absent
+      ignore_errors: yes
+      when: remove_python_container == 'Y' or remove_python_container == 'y'
+
+  roles:
+    - {role: python_container, tags: ["python_container"]}

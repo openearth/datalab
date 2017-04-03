@@ -1,0 +1,53 @@
+---
+# group vars: all
+
+app: openearth
+app_module: '{{ app|replace("-", "_")|replace(" ", "_") }}'
+app_user: openearth
+app_group: openearth
+uwsgi_user: uwsgi
+uwsgi_group: uwsgi
+
+svn_parent_path: /data/svn/repos
+geonetwork_data_dir: /data/geonetwork
+thredds_data_dir: /data/thredds
+opendap_data_dir: /data/opendap
+postgresql_data_dir: /data/postgresql
+kml_file_dir: /data/kml
+
+environment_svn_username: oe_admin
+
+tomcat_management_user: tomcat
+
+django_database_name: '{{ app_module }}'
+django_database_user: openearth
+
+GIS_database_name: gis_db
+GIS_database_user: gis_user
+
+lxc_hostname: worker
+container_dir: /data/containers # TODO: rename to container_base_dir
+container_size: 50G # Container image size in Bytes 2048x1024x 1024kb =  2097152  = 2gb
+python_container_name: centos-6-x86_64 # TODO: rename to container base image (name)
+matlab_container_name: centos-6-matlab
+
+container_root_pass: password
+django_database_pass: password
+environment_svn_password: password
+geoserver_pass: password
+GIS_database_pass: password
+lam_passwd: password
+ldap_admin_passwd: password
+tomcat_management_pass: password
+openearth_passwd: password
+oe_admin_pass: password
+geonetwork_db_pass: password
+
+# Variable is_docker is used by Jenkins. Jenkins tests provisioning by running
+# it in a docker container. A docker container differs from virtualmachines.
+# Certain things (iptables/cgroups) don't work. With "is_docker == true" can be
+# checked if the deployment is rolled out to docker or not. If a task fails
+# because of  docker, use "is_docker == true" to skip it.
+# By default is_docker is false, jenkins overrides it and set is_docker = true.
+is_docker: false
+

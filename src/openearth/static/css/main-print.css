@@ -1,0 +1,111 @@
+/* file: main-print.css
+ * author: Robert Los
+ * Purpose: django basis openearth style sheet to be loaded by base.html
+ * for use when page is printed
+ * date: 24-11-2013
+ * updated: 6-12-2013 hide user data
+ */
+
+@import url(http://fonts.googleapis.com/css?family=Poly);
+@import url(http://fonts.googleapis.com/css?family=Ribeye);
+@import url(http://fonts.googleapis.com/css?family=Share+Tech+Mono);
+@import url(http://fonts.googleapis.com/css?family=Londrina+Solid);
+@import url(http://fonts.googleapis.com/css?family=Poiret+One);
+@import url(http://fonts.googleapis.com/css?family=Josefin+Slab);
+@import url(http://fonts.googleapis.com/css?family=Bowlby+One+Sc);
+@import url(http://fonts.googleapis.com/css?family=Donegal+One);
+
+html {
+
+} 
+
+body {
+	font-family:'Poiret One', "Lucida Console", Monaco, monospace;
+}
+
+article {
+	margin: 0;
+	margin-top: 20px;
+	min-height: 70%;
+	padding: 5px;
+	font-size: 9pt;
+}
+
+article p li{
+	font-family:'Poiret One', "Lucida Console", Monaco, monospace;
+}
+
+	
+header {
+	background-image: url('/openearth/static/img/robertlosccs-logo.png');
+	background-position: top right ;
+	background-repeat: no-repeat;
+	margin 0 auto;
+	padding: 5px;
+	font-family:'Londrina Solid', "Times New Roman", "Times", "serif";
+	font-size: 14pt;
+}
+
+nav {
+	display: none;
+}
+
+	
+footer {
+	font-size: 9pt;
+	font-family: "Arial", "sans-serif";
+	margin: 0 auto;
+}
+
+h1 {
+	color: #000050;
+}
+
+p {
+	color: #000080; 
+	font-family: 'Donegal One', "Times New Roman", Times, serif;
+
+}
+
+.logo {
+	background-image: url('/openearth/static/img/panorama-zand-motor2-klein.jpg');
+	background-position: top right ;
+	background-repeat: no-repeat;
+	background-size: 20% auto;
+	float: right;
+}
+
+.money {
+	text-align: right;
+}
+
+#accordion > *{ display:block !important; } /* print all accordion blocks */
+
+
+table {
+	font-family: 'Droid Sans Mono', Courier, Sans;
+}
+
+th {
+	text-align: left;
+	font-family: 'Droid Sans Mono', Courier, Sans;
+	font-size: 9pt;
+}
+
+td {
+	font-family: 'Droid Sans Mono', Courier, Sans;
+	font-size: 9pt;
+}
+
+a {
+	text-decoration: none;
+}
+
+
+.error {
+	color= #ff0000;
+}
+
+.nav_top_right {
+    display: none;
+}

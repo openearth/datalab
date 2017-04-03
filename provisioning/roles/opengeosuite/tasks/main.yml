@@ -1,0 +1,86 @@
+---
+
+- name: copy yum epel repo key
+  sudo: yes
+  copy: src=epel_signing.key dest=/etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+  register: epel_repo_key
+
+- name: import epel repo key
+  sudo: yes
+  command: /bin/rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-6
+  when: epel_repo_key['changed']
+
+- name: installing OpenGeo Suite dependencies
+  sudo: yes
+  yum: name={{item}} state=present
+  with_items:
+    - python-psycopg2
+    - 'http://elgis.argeo.org/repos/6/elgis-release-6-6_0.noarch.rpm'
+    - 'http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'
+
+- name: add OpenGeo suite repo
+  sudo: yes
+  copy: src=OpenGeo.repo dest=/etc/yum.repos.d/OpenGeo.repo
+
+- name: installing opengeo-server
+  sudo: yes
+  yum: name=opengeo-server state=present
+  notify:
+    - restart tomcat6
+
+- wait_for: path=/var/lib/opengeo/geoserver/security/role/default/roles.xml
+
+- name: configure geoserver roles
+  sudo: yes
+  sudo_user: tomcat
+  template: src=roles.xml dest=/var/lib/opengeo/geoserver/security/role/default/roles.xml
+  notify: restart tomcat6
+
+- name: configure geoserver users and auth
+  sudo: yes
+  sudo_user: tomcat
+  template: src={{item}} dest=/var/lib/opengeo/geoserver/security/usergroup/default/{{item}}
+  with_items:
+    - config.xml
+    - users.xml
+  notify: restart tomcat6
+
+- name: configure geoserver paths
+  sudo: yes
+  sudo_user: tomcat
+  copy: src={{ item }} dest=/etc/tomcat6/Catalina/localhost/{{ item }}
+  notify: restart tomcat6
+  with_items:
+    - dashboard.xml
+    - geoexplorer.xml
+    - geoserver.xml
+    - geowebcache.xml
+    - opengeo-docs.xml
+
+
+- name: create openearth database role
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user: name={{GIS_database_user}} password={{GIS_database_pass}}
+
+- name: create openearth database
+  sudo: yes
+  sudo_user: postgres
+  postgresql_db: name={{GIS_database_name}}
+                 encoding=UTF-8
+                 lc_collate=en_US.UTF-8
+                 lc_ctype=en_US.UTF-8
+                 owner={{GIS_database_user}}
+  register: db_created
+
+- name: create postgis extention on openearth db
+  sudo: yes
+  sudo_user: postgres
+  command: psql {{GIS_database_name}} -c "CREATE EXTENSION postgis;"
+  when: db_created.changed
+
+- name: create postgis_topology extention on openearth db
+  sudo: yes
+  sudo_user: postgres
+  command: psql {{GIS_database_name}} -c "CREATE EXTENSION postgis_topology;"
+  when: db_created.changed

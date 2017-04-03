@@ -1,0 +1,4 @@
+---
+
+default_thredds_dir: /var/lib/tomcat6/content/thredds
+default_opendap_dir: /var/lib/opendap

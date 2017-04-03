@@ -1,0 +1,5 @@
+[nginx]
+name=nginx repo
+baseurl=http://nginx.org/packages/{% if ansible_distribution|lower == 'centos' %}centos{% else %}rhel{% endif %}/6/{{ansible_architecture}}/
+gpgcheck=1
+enabled=1

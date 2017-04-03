@@ -1,0 +1,11 @@
+---
+#
+# Removes non-live broken svn dirs.
+#
+- hosts: no-production
+  connection: ssh
+
+  tasks:
+    - name: remove /data/svn/openearth dir
+      sudo: yes
+      command: rm -rf /data/svn/openearth
